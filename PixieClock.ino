@@ -33,38 +33,47 @@
 struct tm timeinfo;
 uint8_t hour[2], minute[2], seconds[2];
 
+#define FASTLED_RMT_BUILTIN_DRIVER 0
 #include <FastLED.h>
-#define NUM_LEDS 80
-#define LED_PIN 10
+#define NUM_SEGS 4
+#define NUM_LEDS_PER_SEG 23
+#define SEG0_PIN 7
+#define SEG1_PIN 8
+#define SEG2_PIN 9
+#define SEG3_PIN 10
 uint8_t brightness = 150;
-CRGB LED[NUM_LEDS];
-bool onDisplay[NUM_LEDS] = {0};
+CRGB PIXELS[NUM_SEGS][NUM_LEDS_PER_SEG];
 
-static const bool patterns[17][20] = {
-    {0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0}, // 0
-    {0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, // 1
-    {1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1}, // 2
-    {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 1, 1}, // 3
-    {1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1}, // 4
-    {1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1}, // 5
-    {1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}, // 6
-    {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, // 7
-    {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}, // 8
-    {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1}, // 9
-    {0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1}, // A
-    {1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}, // B
-    {0, 1, 1, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0}, // C
-    {1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0}, // D
-    {1, 1, 1, 1, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}, // E
-    {1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1}, // F
-    {0, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1}, // °
+// Character maps
+static const bool patterns[17][NUM_LEDS_PER_SEG] = {
+    {0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0}, // 0
+    {0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, // 1
+    {0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 0}, // 2
+    {0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 1, 1, 0, 0}, // 3
+    {0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0}, // 4
+    {0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 0}, // 5
+    {0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0}, // 6
+    {0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, // 7
+    {0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0}, // 8
+    {0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 0}, // 9
+    {0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0}, // A
+    {0, 1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0}, // B
+    {0, 0, 1, 1, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0}, // C
+    {0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0}, // D
+    {0, 1, 1, 1, 1, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0}, // E
+    {0, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0}, // F
+    {0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0}, // °
 };
 
+bool onDisplay[NUM_SEGS][NUM_LEDS_PER_SEG] = {0};
 unsigned long start = 0;
 
 void setup()
 {
-    FastLED.addLeds<WS2812B, LED_PIN, GRB>(LED, NUM_LEDS);
+    FastLED.addLeds<WS2812B, SEG0_PIN, GRB>(PIXELS[0], NUM_LEDS_PER_SEG);
+    FastLED.addLeds<WS2812B, SEG1_PIN, GRB>(PIXELS[1], NUM_LEDS_PER_SEG);
+    FastLED.addLeds<WS2812B, SEG2_PIN, GRB>(PIXELS[2], NUM_LEDS_PER_SEG);
+    FastLED.addLeds<WS2812B, SEG3_PIN, GRB>(PIXELS[3], NUM_LEDS_PER_SEG);
 
     WiFi.begin(SSID, PASSWORD);
     while (WiFi.status() != WL_CONNECTED)
@@ -90,34 +99,37 @@ void loop()
     seconds[0] = timeinfo.tm_sec / 10;
     seconds[1] = timeinfo.tm_sec % 10;
 
-    for (int i = 0; i < NUM_LEDS / 4; i++)
+    for (int i = 0; i < NUM_LEDS_PER_SEG; i++)
     {
-        onDisplay[i] = patterns[hour[0]][i];
-        onDisplay[i + NUM_LEDS / 4] = patterns[hour[1]][i];
-        onDisplay[i + NUM_LEDS / 2] = patterns[minute[0]][i];
-        onDisplay[i + NUM_LEDS / 2 + NUM_LEDS / 4] = patterns[minute[1]][i];
+        onDisplay[0][i] = patterns[hour[0]][i];
+        onDisplay[1][i] = patterns[hour[1]][i];
+        onDisplay[2][i] = patterns[minute[0]][i];
+        onDisplay[3][i] = patterns[minute[1]][i];
     }
 
     start = millis();
     while (millis() - start < 60000 - seconds[0] * 10000 - seconds[1] * 1000)
     {
-        for (int i = 0; i < NUM_LEDS; i++)
+        for (int i = 0; i < NUM_SEGS; i++)
         {
-            if (onDisplay[i])
+            for (int j = 0; j < NUM_LEDS_PER_SEG; j++)
             {
-                LED[i] = CRGB(0xFF0000);
-            }
-            else
-            {
-                LED[i] = CRGB::Black;
+                if (onDisplay[i][j])
+                {
+                    PIXELS[i][j] = CRGB::Red;
+                }
+                else
+                {
+                    PIXELS[i][j] = CRGB::Black;
+                }
             }
         }
         FastLED.show();
         Delay(500);
 
-        for (int i = 0; i < NUM_LEDS / 4; i++)
+        for (int i = 0; i < NUM_LEDS_PER_SEG / 4; i++)
         {
-            LED[NUM_LEDS - i - 1] = CRGB::Black;
+            PIXELS[3][i] = CRGB::Black;
         }
         FastLED.show();
         Delay(500);
