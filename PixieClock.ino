@@ -24,16 +24,20 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>
 */
 
-// modify Secrets.h to manage your credentials
+// modify Secrets.h to manage your credentials:
 #include <Secrets.h>
+// Otherwise:
+// const char *WIFI_SSID = "";
+// const char *WIFI_PASSWORD = "";
+// const char *NTP_SERVER = "";
+// const char *GMT_TIMEZONE = "";
 
 #include <WiFi.h>
 
 #include <time.h>
 struct tm timeinfo;
-uint8_t hour[2], minute[2], seconds[2];
+uint8_t lastSyncHour = 255;
 
-#define FASTLED_RMT_BUILTIN_DRIVER 0
 #include <FastLED.h>
 #define NUM_SEGS 4
 #define NUM_LEDS_PER_SEG 23
@@ -41,8 +45,14 @@ uint8_t hour[2], minute[2], seconds[2];
 #define SEG1_PIN 8
 #define SEG2_PIN 9
 #define SEG3_PIN 10
-uint8_t brightness = 150;
+#define SENSE_PIN_0 GPIO_NUM_18
+#define SENSE_PIN_1 GPIO_NUM_8
+#define SENSE_PIN_2 GPIO_NUM_9
+#define SENSE_PIN_3 GPIO_NUM_10
+
 CRGB PIXELS[NUM_SEGS][NUM_LEDS_PER_SEG];
+bool onDisplay[NUM_SEGS][NUM_LEDS_PER_SEG] = {0};
+uint8_t brightness = 150;
 
 // Character maps
 static const bool patterns[17][NUM_LEDS_PER_SEG] = {
@@ -65,39 +75,85 @@ static const bool patterns[17][NUM_LEDS_PER_SEG] = {
     {0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0}, // °
 };
 
-bool onDisplay[NUM_SEGS][NUM_LEDS_PER_SEG] = {0};
-unsigned long start = 0;
+unsigned long timePast = 0;
 
 void setup()
 {
+    Serial.begin(115200);
+
+    // Initialize GPIO
+    pinMode(SEG0_PIN, OUTPUT);
+    pinMode(SEG1_PIN, OUTPUT);
+    pinMode(SEG2_PIN, OUTPUT);
+    pinMode(SEG3_PIN, OUTPUT);
+    pinMode(SENSE_PIN_0, INPUT);
+    pinMode(SENSE_PIN_1, INPUT);
+    pinMode(SENSE_PIN_2, INPUT);
+    pinMode(SENSE_PIN_3, INPUT);
+
+    // Initialize LEDs
     FastLED.addLeds<WS2812B, SEG0_PIN, GRB>(PIXELS[0], NUM_LEDS_PER_SEG);
     FastLED.addLeds<WS2812B, SEG1_PIN, GRB>(PIXELS[1], NUM_LEDS_PER_SEG);
     FastLED.addLeds<WS2812B, SEG2_PIN, GRB>(PIXELS[2], NUM_LEDS_PER_SEG);
     FastLED.addLeds<WS2812B, SEG3_PIN, GRB>(PIXELS[3], NUM_LEDS_PER_SEG);
 
+    // Connect to WiFi
+    Serial.print("Connecting to WiFi: ");
+    Serial.println(SSID);
     WiFi.begin(SSID, PASSWORD);
     while (WiFi.status() != WL_CONNECTED)
     {
         Delay(100);
     }
 
+    // Sync time
     configTime(GMT_TIMEZONE * 3600, 0, NTP_SERVER);
+    if (!getLocalTime(&timeinfo))
+    {
+        Serial.println("Failed to obtain time. Restarting.");
+        ESP.restart();
+    }
+    lastSyncHour = timeinfo.tm_hour;
+    Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
 }
 
 void loop()
 {
-    FastLED.setBrightness(brightness);
-
+    // Get time for this loop
     if (!getLocalTime(&timeinfo))
     {
+        Serial.println("Failed to obtain time");
         return;
     }
-    hour[0] = timeinfo.tm_hour / 10;
-    hour[1] = timeinfo.tm_hour % 10;
-    minute[0] = timeinfo.tm_min / 10;
-    minute[1] = timeinfo.tm_min % 10;
-    seconds[0] = timeinfo.tm_sec / 10;
-    seconds[1] = timeinfo.tm_sec % 10;
+
+    // Check if time needs to be synced
+    if (lastSyncHour != timeinfo.tm_hour)
+    {
+        Serial.println("Syncing time");
+        if (!getLocalTime(&timeinfo))
+        {
+            Serial.println("Failed to obtain time");
+            return;
+        }
+        lastSyncHour = timeinfo.tm_hour;
+        Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
+    }
+
+    DisplayTime(timeinfo, (millis() - timePast >= 500), PIXELS[0], PIXELS[1], PIXELS[2], PIXELS[3]);
+    timePast = millis();
+}
+
+void DisplayTime(tm time_struct, bool lastDigitOn, CRGB (&Seg0)[NUM_LEDS_PER_SEG], CRGB (&Seg1)[NUM_LEDS_PER_SEG], CRGB (&Seg2)[NUM_LEDS_PER_SEG], CRGB (&Seg3)[NUM_LEDS_PER_SEG])
+{
+    FastLED.setBrightness(brightness);
+
+    uint8_t hour[2], minute[2], seconds[2];
+    hour[0] = time_struct.tm_hour / 10;
+    hour[1] = time_struct.tm_hour % 10;
+    minute[0] = time_struct.tm_min / 10;
+    minute[1] = time_struct.tm_min % 10;
+    seconds[0] = time_struct.tm_sec / 10;
+    seconds[1] = time_struct.tm_sec % 10;
 
     for (int i = 0; i < NUM_LEDS_PER_SEG; i++)
     {
@@ -107,33 +163,44 @@ void loop()
         onDisplay[3][i] = patterns[minute[1]][i];
     }
 
-    start = millis();
-    while (millis() - start < 60000 - seconds[0] * 10000 - seconds[1] * 1000)
+    for (int i = 0; i < NUM_SEGS - 1; i++)
     {
-        for (int i = 0; i < NUM_SEGS; i++)
+        for (int j = 0; j < NUM_LEDS_PER_SEG; j++)
         {
-            for (int j = 0; j < NUM_LEDS_PER_SEG; j++)
+            if (onDisplay[i][j])
             {
-                if (onDisplay[i][j])
-                {
-                    PIXELS[i][j] = CRGB::Red;
-                }
-                else
-                {
-                    PIXELS[i][j] = CRGB::Black;
-                }
+                PIXELS[i][j] = CRGB::Red;
+            }
+            else
+            {
+                PIXELS[i][j] = CRGB::Black;
             }
         }
-        FastLED.show();
-        Delay(500);
-
-        for (int i = 0; i < NUM_LEDS_PER_SEG / 4; i++)
-        {
-            PIXELS[3][i] = CRGB::Black;
-        }
-        FastLED.show();
-        Delay(500);
     }
+
+    if (lastDigitOn)
+    {
+        for (int i = 0; i < NUM_LEDS_PER_SEG; i++)
+        {
+            if (onDisplay[4][i])
+            {
+                PIXELS[4][i] = CRGB::Red;
+            }
+            else
+            {
+                PIXELS[4][i] = CRGB::Black;
+            }
+        }
+    }
+    else
+    {
+        for (int i = 0; i < NUM_LEDS_PER_SEG; i++)
+        {
+            PIXELS[4][i] = CRGB::Black;
+        }
+    }
+
+    FastLED.show();
 }
 
 void Delay(unsigned long ms)
