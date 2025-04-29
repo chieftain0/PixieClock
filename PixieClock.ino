@@ -108,6 +108,7 @@ void setup()
 
     // Sync time
     configTime(GMT_TIMEZONE * 3600, 0, NTP_SERVER);
+    Serial.println("Syncing time");
     if (!getLocalTime(&timeinfo))
     {
         Serial.println("Failed to obtain time. Restarting.");
@@ -127,7 +128,7 @@ void loop()
     }
 
     // Check if time needs to be synced
-    if (lastSyncHour != timeinfo.tm_hour)
+    if (lastSyncHour != timeinfo.tm_hour || timeinfo.tm_year < 125)
     {
         Serial.println("Syncing time");
         if (!getLocalTime(&timeinfo))
