@@ -27,10 +27,15 @@
 // modify Secrets.h to manage your credentials:
 #include <Secrets.h>
 // Otherwise:
-// const char *WIFI_SSID = "";
-// const char *WIFI_PASSWORD = "";
-// const char *NTP_SERVER = "";
-// const char *GMT_TIMEZONE = "";
+// const bool isEAP = false;
+// const char *SSID = "";
+// const char *PASSWORD = "";
+// const char *EAP_IDENTITY = ""; // Optional
+// const char *EAP_USERNAME = ""; // Optional
+// const char *NTP_SERVER1 = "";
+// const char *NTP_SERVER2 = ""; // Optional
+// const char *NTP_SERVER3 = ""; // Optional
+// const int *GMT_TIMEZONE = 0;
 
 #include <WiFi.h>
 
@@ -41,10 +46,10 @@ uint8_t lastSyncHour = 255;
 #include <FastLED.h>
 #define NUM_SEGS 4
 #define NUM_LEDS_PER_SEG 23
-#define SEG0_PIN 7
-#define SEG1_PIN 8
-#define SEG2_PIN 9
-#define SEG3_PIN 10
+#define SEG0_PIN GPIO_NUM_7
+#define SEG1_PIN GPIO_NUM_8
+#define SEG2_PIN GPIO_NUM_9
+#define SEG3_PIN GPIO_NUM_10
 #define SENSE_PIN_0 GPIO_NUM_18
 #define SENSE_PIN_1 GPIO_NUM_8
 #define SENSE_PIN_2 GPIO_NUM_9
@@ -100,18 +105,26 @@ void setup()
     // Connect to WiFi
     Serial.print("Connecting to WiFi: ");
     Serial.println(SSID);
-    WiFi.begin(SSID, PASSWORD);
+    if (isEAP)
+    {
+        WiFi.begin(SSID, WPA2_AUTH_PEAP, EAP_IDENTITY, EAP_USERNAME, PASSWORD);
+    }
+    else
+    {
+        WiFi.begin(SSID, PASSWORD);
+    }
     while (WiFi.status() != WL_CONNECTED)
     {
-        Delay(100);
+        SafeDelay(100);
     }
+    Serial.println("Connected to WiFi");
 
-    // Sync time
-    configTime(GMT_TIMEZONE * 3600, 0, NTP_SERVER);
+    // Sync time for the first time
+    configTime(GMT_TIMEZONE * 3600, 0, NTP_SERVER1, NTP_SERVER2, NTP_SERVER3);
     Serial.println("Syncing time");
-    if (!getLocalTime(&timeinfo))
+    if (!GetTimeFromRTC(&timeinfo, 10))
     {
-        Serial.println("Failed to obtain time. Restarting.");
+        Serial.println("Failed to sync time. Rebooting...");
         ESP.restart();
     }
     lastSyncHour = timeinfo.tm_hour;
@@ -121,20 +134,20 @@ void setup()
 void loop()
 {
     // Get time for this loop
-    if (!getLocalTime(&timeinfo))
+    if (!GetTimeFromRTC(&timeinfo, 10))
     {
-        Serial.println("Failed to obtain time");
-        return;
+        Serial.println("Failed to sync time. Rebooting...");
+        ESP.restart();
     }
 
     // Check if time needs to be synced
     if (lastSyncHour != timeinfo.tm_hour || timeinfo.tm_year < 125)
     {
         Serial.println("Syncing time");
-        if (!getLocalTime(&timeinfo))
+        if (!GetTimeFromRTC(&timeinfo, 10))
         {
-            Serial.println("Failed to obtain time");
-            return;
+            Serial.println("Failed to sync time. Rebooting...");
+            ESP.restart();
         }
         lastSyncHour = timeinfo.tm_hour;
         Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
@@ -144,7 +157,7 @@ void loop()
     timePast = millis();
 }
 
-void DisplayTime(tm time_struct, bool lastDigitOn, CRGB (&Seg0)[NUM_LEDS_PER_SEG], CRGB (&Seg1)[NUM_LEDS_PER_SEG], CRGB (&Seg2)[NUM_LEDS_PER_SEG], CRGB (&Seg3)[NUM_LEDS_PER_SEG])
+void DisplayTime(tm &time_struct, bool lastDigitOn, CRGB (&Seg0)[NUM_LEDS_PER_SEG], CRGB (&Seg1)[NUM_LEDS_PER_SEG], CRGB (&Seg2)[NUM_LEDS_PER_SEG], CRGB (&Seg3)[NUM_LEDS_PER_SEG])
 {
     FastLED.setBrightness(brightness);
 
@@ -204,11 +217,29 @@ void DisplayTime(tm time_struct, bool lastDigitOn, CRGB (&Seg0)[NUM_LEDS_PER_SEG
     FastLED.show();
 }
 
-void Delay(unsigned long ms)
+void SafeDelay(unsigned long ms)
 {
     unsigned long start = millis();
     while (millis() - start < ms)
     {
         yield();
     }
+}
+
+bool GetTimeFromRTC(tm *timeinfo, int num_tries)
+{
+    if (!getLocalTime(timeinfo))
+    {
+        int retries = 0;
+        while (!getLocalTime(timeinfo) && retries < num_tries)
+        {
+            SafeDelay(500);
+            retries++;
+        }
+        if (retries >= num_tries)
+        {
+            return false;
+        }
+    }
+    return true;
 }
