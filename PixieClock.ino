@@ -36,6 +36,8 @@
 // const char *NTP_SERVER2 = ""; // Optional
 // const char *NTP_SERVER3 = ""; // Optional
 // const int *GMT_TIMEZONE = 0;
+// const char *OPENWEATHERMAP_API_KEY = "";
+// const char *OPENWEATHERMAP_CITY = "";
 
 #include <WiFi.h>
 
@@ -56,8 +58,15 @@ uint8_t lastSyncHour = 255;
 #define SENSE_PIN_3 GPIO_NUM_10
 
 CRGB PIXELS[NUM_SEGS][NUM_LEDS_PER_SEG];
-bool onDisplay[NUM_SEGS][NUM_LEDS_PER_SEG] = {0};
 uint8_t brightness = 150;
+
+#include <HTTPClient.h>
+#include <ArduinoJson.h>
+#include <GyverDS18.h>
+#define DS18_PIN GPIO_NUM_11
+GyverDS18Single DS18(DS18_PIN);
+bool hasRequestedTemp = false;
+double temp = 99;
 
 // Character maps
 static const bool patterns[17][NUM_LEDS_PER_SEG] = {
@@ -153,14 +162,57 @@ void loop()
         Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
     }
 
-    DisplayTime(timeinfo, (millis() - timePast >= 500), PIXELS[0], PIXELS[1], PIXELS[2], PIXELS[3]);
-    timePast = millis();
+    // Show time for first 55 seconds
+    if (timeinfo.tm_sec < 50)
+    {
+        DisplayTime(timeinfo, (millis() - timePast >= 500), CRGB::Red, brightness, PIXELS);
+        timePast = millis();
+
+        // Set the flag for the next mode
+        hasRequestedTemp = false;
+    }
+
+    // Show outdoor temperature
+    else if (timeinfo.tm_sec >= 50 && timeinfo.tm_sec < 55)
+    {
+
+        if (!hasRequestedTemp)
+        {
+            // Request temperature for both modes
+            hasRequestedTemp = true;
+            DS18.requestTemp();
+            temp = GetOutdoorTemperature(OPENWEATHERMAP_CITY, OPENWEATHERMAP_API_KEY);
+        }
+        DisplayTemperature(round(temp), CRGB::Blue, brightness, (millis() - timePast >= 500), PIXELS);
+        timePast = millis();
+
+    }
+
+    // Show room temperature
+    else
+    {
+        if (DS18.readTemp())
+        {
+            int temp = round(DS18.getTemp());
+            DisplayTemperature(temp, CRGB::Green, brightness, (millis() - timePast >= 500), PIXELS);
+            timePast = millis();
+        }
+        hasRequestedTemp = false;
+    }
+
+    // Reboot at midnight every day
+    // if (timeinfo.tm_hour == 0 && timeinfo.tm_min == 0 && timeinfo.tm_sec == 0 && lastSyncHour != 0)
+    // {
+    //     Serial.println("Long day! Rebooting...");
+    //     ESP.restart();
+    // }
 }
 
-void DisplayTime(tm &time_struct, bool lastDigitOn, CRGB (&Seg0)[NUM_LEDS_PER_SEG], CRGB (&Seg1)[NUM_LEDS_PER_SEG], CRGB (&Seg2)[NUM_LEDS_PER_SEG], CRGB (&Seg3)[NUM_LEDS_PER_SEG])
+void DisplayTime(tm &time_struct, bool lastDigitOn, CRGB color, double brightness, CRGB (&pixels)[NUM_SEGS][NUM_LEDS_PER_SEG])
 {
     FastLED.setBrightness(brightness);
 
+    bool onDisplay[NUM_SEGS][NUM_LEDS_PER_SEG] = {0};
     uint8_t hour[2], minute[2], seconds[2];
     hour[0] = time_struct.tm_hour / 10;
     hour[1] = time_struct.tm_hour % 10;
@@ -183,11 +235,11 @@ void DisplayTime(tm &time_struct, bool lastDigitOn, CRGB (&Seg0)[NUM_LEDS_PER_SE
         {
             if (onDisplay[i][j])
             {
-                PIXELS[i][j] = CRGB::Red;
+                pixels[i][j] = color;
             }
             else
             {
-                PIXELS[i][j] = CRGB::Black;
+                pixels[i][j] = CRGB::Black;
             }
         }
     }
@@ -198,11 +250,11 @@ void DisplayTime(tm &time_struct, bool lastDigitOn, CRGB (&Seg0)[NUM_LEDS_PER_SE
         {
             if (onDisplay[4][i])
             {
-                PIXELS[4][i] = CRGB::Red;
+                pixels[4][i] = color;
             }
             else
             {
-                PIXELS[4][i] = CRGB::Black;
+                pixels[4][i] = CRGB::Black;
             }
         }
     }
@@ -210,20 +262,66 @@ void DisplayTime(tm &time_struct, bool lastDigitOn, CRGB (&Seg0)[NUM_LEDS_PER_SE
     {
         for (int i = 0; i < NUM_LEDS_PER_SEG; i++)
         {
-            PIXELS[4][i] = CRGB::Black;
+            pixels[4][i] = CRGB::Black;
         }
     }
 
     FastLED.show();
 }
 
-void SafeDelay(unsigned long ms)
+void DisplayTemperature(int temp, CRGB color, double brightness, bool secondsDisplayOn, CRGB (&pixels)[NUM_SEGS][NUM_LEDS_PER_SEG])
 {
-    unsigned long start = millis();
-    while (millis() - start < ms)
+    bool onDisplay[NUM_SEGS][NUM_LEDS_PER_SEG] = {0};
+
+    int first_digit = temp / 10;
+    int second_digit = temp % 10;
+
+    for (int i = 0; i < NUM_LEDS_PER_SEG; i++)
     {
-        yield();
+        onDisplay[0][i] = patterns[first_digit][i];
+        onDisplay[1][i] = patterns[second_digit][i];
+        onDisplay[2][i] = patterns[16][i]; // Display degree symbol
+        onDisplay[3][i] = patterns[13][i]; // Display C
     }
+
+    for (int i = 0; i < NUM_SEGS; i++)
+    {
+        for (int j = 0; j < NUM_LEDS_PER_SEG; j++)
+        {
+            if (onDisplay[i][j])
+            {
+                pixels[i][j] = color;
+            }
+            else
+            {
+                pixels[i][j] = CRGB::Black;
+            }
+        }
+    }
+
+    if (secondsDisplayOn)
+    {
+        for (int i = 0; i < NUM_LEDS_PER_SEG; i++)
+        {
+            if (onDisplay[3][i])
+            {
+                pixels[3][i] = color;
+            }
+            else
+            {
+                pixels[3][i] = CRGB::Black;
+            }
+        }
+    }
+    else
+    {
+        for (int i = 0; i < NUM_LEDS_PER_SEG; i++)
+        {
+            pixels[4][i] = CRGB::Black;
+        }
+    }
+
+    FastLED.show();
 }
 
 bool GetTimeFromRTC(tm *timeinfo, int num_tries)
@@ -242,4 +340,55 @@ bool GetTimeFromRTC(tm *timeinfo, int num_tries)
         }
     }
     return true;
+}
+
+double GetOutdoorTemperature(const char *city, const char *apiKey)
+{
+    char URL[256];
+    snprintf(URL,
+             sizeof(URL),
+             "http://api.openweathermap.org/data/2.5/weather?q=%s&appid=%s&units=metric",
+             city, apiKey);
+
+    WiFiClient client;
+    HTTPClient http;
+    http.begin(client, URL);
+    int httpCode = http.GET();
+    if (httpCode > 0)
+    {
+        int len = http.getSize();
+        char json[len + 1];
+
+        int bytesRead = http.getStream().readBytes(json, len);
+        json[bytesRead] = '\0';
+
+        DynamicJsonDocument doc(2048);
+        DeserializationError error = deserializeJson(doc, json);
+
+        client.stop();
+        http.end();
+
+        if (error)
+        {
+            client.stop();
+            http.end();
+            return 99;
+        }
+        return double(doc["main"]["temp"]);
+    }
+    else
+    {
+        client.stop();
+        http.end();
+        return 99;
+    }
+}
+
+void SafeDelay(unsigned long ms)
+{
+    unsigned long start = millis();
+    while (millis() - start < ms)
+    {
+        yield();
+    }
 }
