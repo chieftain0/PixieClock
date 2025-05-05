@@ -24,20 +24,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>
 */
 
-// modify Secrets.h to manage your credentials:
-#include <Secrets.h>
-// Otherwise:
-// const bool isEAP = false;
-// const char *SSID = "";
-// const char *PASSWORD = "";
-// const char *EAP_IDENTITY = ""; // Optional
-// const char *EAP_USERNAME = ""; // Optional
-// const char *NTP_SERVER1 = "";
-// const char *NTP_SERVER2 = ""; // Optional
-// const char *NTP_SERVER3 = ""; // Optional
-// const int *GMT_TIMEZONE = 0;
-// const char *OPENWEATHERMAP_API_KEY = "";
-// const char *OPENWEATHERMAP_CITY = "";
+#include "config.h"
 
 #include <WiFi.h>
 
@@ -45,51 +32,16 @@
 struct tm timeinfo;
 uint8_t lastSyncHour = 255;
 
+#include "Display.h"
 #include <FastLED.h>
-#define NUM_SEGS 4
-#define NUM_LEDS_PER_SEG 23
-#define SEG0_PIN GPIO_NUM_7
-#define SEG1_PIN GPIO_NUM_8
-#define SEG2_PIN GPIO_NUM_9
-#define SEG3_PIN GPIO_NUM_10
-#define SENSE_PIN_0 GPIO_NUM_18
-#define SENSE_PIN_1 GPIO_NUM_8
-#define SENSE_PIN_2 GPIO_NUM_9
-#define SENSE_PIN_3 GPIO_NUM_10
-
 CRGB PIXELS[NUM_SEGS][NUM_LEDS_PER_SEG];
 uint8_t brightness = 150;
 
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 #include <GyverDS18.h>
-#define DS18_PIN GPIO_NUM_11
 GyverDS18Single DS18(DS18_PIN);
 bool hasRequestedTemp = false;
-double temp = 99;
-
-// Character maps
-static const bool patterns[17][NUM_LEDS_PER_SEG] = {
-    {0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0}, // 0
-    {0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, // 1
-    {0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 0}, // 2
-    {0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 1, 1, 0, 0}, // 3
-    {0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0}, // 4
-    {0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 0}, // 5
-    {0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0}, // 6
-    {0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, // 7
-    {0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0}, // 8
-    {0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 0}, // 9
-    {0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0}, // A
-    {0, 1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0}, // B
-    {0, 0, 1, 1, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0}, // C
-    {0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0}, // D
-    {0, 1, 1, 1, 1, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0}, // E
-    {0, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0}, // F
-    {0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0}, // °
-};
-
-unsigned long timePast = 0;
 
 void setup()
 {
@@ -165,8 +117,7 @@ void loop()
     // Show time for first 55 seconds
     if (timeinfo.tm_sec < 50)
     {
-        DisplayTime(timeinfo, (millis() - timePast >= 500), CRGB::Red, brightness, PIXELS);
-        timePast = millis();
+        DisplayTime(timeinfo, brightness, CRGB::Red, PIXELS);
 
         // Set the flag for the next mode
         hasRequestedTemp = false;
@@ -175,17 +126,15 @@ void loop()
     // Show outdoor temperature
     else if (timeinfo.tm_sec >= 50 && timeinfo.tm_sec < 55)
     {
-
+        int temp = 99;
         if (!hasRequestedTemp)
         {
             // Request temperature for both modes
             hasRequestedTemp = true;
             DS18.requestTemp();
-            temp = GetOutdoorTemperature(OPENWEATHERMAP_CITY, OPENWEATHERMAP_API_KEY);
+            temp = round(GetOutdoorTemperature(OPENWEATHERMAP_CITY, OPENWEATHERMAP_API_KEY));
         }
-        DisplayTemperature(round(temp), CRGB::Blue, brightness, (millis() - timePast >= 500), PIXELS);
-        timePast = millis();
-
+        DisplayTemperature(temp, brightness, CRGB::Blue, PIXELS);
     }
 
     // Show room temperature
@@ -194,8 +143,7 @@ void loop()
         if (DS18.readTemp())
         {
             int temp = round(DS18.getTemp());
-            DisplayTemperature(temp, CRGB::Green, brightness, (millis() - timePast >= 500), PIXELS);
-            timePast = millis();
+            DisplayTemperature(temp, brightness, CRGB::Green, PIXELS);
         }
         hasRequestedTemp = false;
     }
@@ -206,122 +154,6 @@ void loop()
     //     Serial.println("Long day! Rebooting...");
     //     ESP.restart();
     // }
-}
-
-void DisplayTime(tm &time_struct, bool lastDigitOn, CRGB color, double brightness, CRGB (&pixels)[NUM_SEGS][NUM_LEDS_PER_SEG])
-{
-    FastLED.setBrightness(brightness);
-
-    bool onDisplay[NUM_SEGS][NUM_LEDS_PER_SEG] = {0};
-    uint8_t hour[2], minute[2], seconds[2];
-    hour[0] = time_struct.tm_hour / 10;
-    hour[1] = time_struct.tm_hour % 10;
-    minute[0] = time_struct.tm_min / 10;
-    minute[1] = time_struct.tm_min % 10;
-    seconds[0] = time_struct.tm_sec / 10;
-    seconds[1] = time_struct.tm_sec % 10;
-
-    for (int i = 0; i < NUM_LEDS_PER_SEG; i++)
-    {
-        onDisplay[0][i] = patterns[hour[0]][i];
-        onDisplay[1][i] = patterns[hour[1]][i];
-        onDisplay[2][i] = patterns[minute[0]][i];
-        onDisplay[3][i] = patterns[minute[1]][i];
-    }
-
-    for (int i = 0; i < NUM_SEGS - 1; i++)
-    {
-        for (int j = 0; j < NUM_LEDS_PER_SEG; j++)
-        {
-            if (onDisplay[i][j])
-            {
-                pixels[i][j] = color;
-            }
-            else
-            {
-                pixels[i][j] = CRGB::Black;
-            }
-        }
-    }
-
-    if (lastDigitOn)
-    {
-        for (int i = 0; i < NUM_LEDS_PER_SEG; i++)
-        {
-            if (onDisplay[4][i])
-            {
-                pixels[4][i] = color;
-            }
-            else
-            {
-                pixels[4][i] = CRGB::Black;
-            }
-        }
-    }
-    else
-    {
-        for (int i = 0; i < NUM_LEDS_PER_SEG; i++)
-        {
-            pixels[4][i] = CRGB::Black;
-        }
-    }
-
-    FastLED.show();
-}
-
-void DisplayTemperature(int temp, CRGB color, double brightness, bool secondsDisplayOn, CRGB (&pixels)[NUM_SEGS][NUM_LEDS_PER_SEG])
-{
-    bool onDisplay[NUM_SEGS][NUM_LEDS_PER_SEG] = {0};
-
-    int first_digit = temp / 10;
-    int second_digit = temp % 10;
-
-    for (int i = 0; i < NUM_LEDS_PER_SEG; i++)
-    {
-        onDisplay[0][i] = patterns[first_digit][i];
-        onDisplay[1][i] = patterns[second_digit][i];
-        onDisplay[2][i] = patterns[16][i]; // Display degree symbol
-        onDisplay[3][i] = patterns[13][i]; // Display C
-    }
-
-    for (int i = 0; i < NUM_SEGS; i++)
-    {
-        for (int j = 0; j < NUM_LEDS_PER_SEG; j++)
-        {
-            if (onDisplay[i][j])
-            {
-                pixels[i][j] = color;
-            }
-            else
-            {
-                pixels[i][j] = CRGB::Black;
-            }
-        }
-    }
-
-    if (secondsDisplayOn)
-    {
-        for (int i = 0; i < NUM_LEDS_PER_SEG; i++)
-        {
-            if (onDisplay[3][i])
-            {
-                pixels[3][i] = color;
-            }
-            else
-            {
-                pixels[3][i] = CRGB::Black;
-            }
-        }
-    }
-    else
-    {
-        for (int i = 0; i < NUM_LEDS_PER_SEG; i++)
-        {
-            pixels[4][i] = CRGB::Black;
-        }
-    }
-
-    FastLED.show();
 }
 
 bool GetTimeFromRTC(tm *timeinfo, int num_tries)
