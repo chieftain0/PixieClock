@@ -43,6 +43,13 @@ static const bool patterns[37][NUM_LEDS_PER_SEG] = {
     {0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0}, // °
 };
 
+/**
+ * @brief Look up the index from patterns array
+ * @param c character to look up
+ * @return index in patterns array, or 36 (°) if not found
+ * @details
+ * 0-9 is 0-9 and A-Z is 10-35, '°' is 36
+ */
 int CharToIndex(char c) // look up the index from patterns array
 {
     if (c >= 'A' && c <= 'Z')
@@ -59,11 +66,28 @@ int CharToIndex(char c) // look up the index from patterns array
     }
     else
     {
-        return -1;
+        return 36;
     }
 }
 
-void Display(char c0, char c1, char c2, char c3, double brightness, CRGB color0, CRGB color1, CRGB color2, CRGB color3, CRGB (&pixels)[NUM_SEGS][NUM_LEDS_PER_SEG])
+/**
+ * @brief Display 4 characters on 4 segments of LED segments
+ * @param c0 character to display on first segment
+ * @param c1 character to display on second segment
+ * @param c2 character to display on third segment
+ * @param c3 character to display on fourth segment
+ * @param brightness overall brightness of the LEDs
+ * @param color0 color of first segment
+ * @param color1 color of second segment
+ * @param color2 color of third segment
+ * @param color3 color of fourth segment
+ * @param pixels the 2D array of CRGBs to store the LED data in
+ * @details
+ *  The characters are looked up in the patterns array, and the segment
+ *  is filled with the corresponding LEDs. The brightness and color
+ *  are set accordingly.
+ */
+void Display(char c0, char c1, char c2, char c3, uint8_t brightness, CRGB color0, CRGB color1, CRGB color2, CRGB color3, CRGB (&pixels)[NUM_SEGS][NUM_LEDS_PER_SEG])
 {
     FastLED.setBrightness(brightness);
     CRGB colors[NUM_SEGS] = {color0, color1, color2, color3};
@@ -86,7 +110,20 @@ void Display(char c0, char c1, char c2, char c3, double brightness, CRGB color0,
     FastLED.show();
 }
 
-void DisplayTime(tm &time_struct, double brightness, CRGB color, CRGB (&pixels)[NUM_SEGS][NUM_LEDS_PER_SEG])
+/**
+ * @brief Display the time on the 4 segment display
+ * @param time_struct a tm struct with the current time
+ * @param brightness overall brightness of the LEDs
+ * @param color color of the LEDs
+ * @param pixels the 2D array of CRGBs to store the LED data in
+ * @details
+ *  The time is displayed in the format HHMM, with the first digit
+ *  of the hour on the first segment, the second digit of the hour
+ *  on the second segment, the first digit of the minute on the third
+ *  segment, and the second digit of the minute on the fourth segment.
+ *  The display is updated every 500 milliseconds to blink the last digit.
+ */
+void DisplayTime(tm &time_struct, uint8_t brightness, CRGB color, CRGB (&pixels)[NUM_SEGS][NUM_LEDS_PER_SEG])
 {
     static unsigned long timePast = 0;
 
@@ -107,7 +144,20 @@ void DisplayTime(tm &time_struct, double brightness, CRGB color, CRGB (&pixels)[
     }
 }
 
-void DisplayTemperature(int temp, double brightness, CRGB color, CRGB (&pixels)[NUM_SEGS][NUM_LEDS_PER_SEG])
+/**
+ * @brief Display the temperature on the 4 segment display
+ * @param temp the temperature as an integer (e.g. 25 for 25 degrees Celsius)
+ * @param brightness overall brightness of the LEDs
+ * @param color color of the LEDs
+ * @param pixels the 2D array of CRGBs to store the LED data in
+ * @details
+ *  The temperature is displayed in the format XX°C, with the first digit
+ *  of the temperature on the first segment, the second digit of the
+ *  temperature on the second segment, the degree symbol on the third
+ *  segment, and the letter 'C' on the fourth segment.
+ *  The display is updated every 500 milliseconds to blink the third (°) digit.
+ */
+void DisplayTemperature(int temp, uint8_t brightness, CRGB color, CRGB (&pixels)[NUM_SEGS][NUM_LEDS_PER_SEG])
 {
     static unsigned long timePast = 0;
 

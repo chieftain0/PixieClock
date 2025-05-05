@@ -156,6 +156,17 @@ void loop()
     // }
 }
 
+/**
+ * @brief Synchronizes the system time using the Real Time Clock (RTC)
+ * @param timeinfo A pointer to a tm struct where the synced time will be stored
+ * @param num_tries The maximum number of attempts to retrieve the time
+ * @return True if the time was successfully synchronized, false otherwise
+ * @details
+ *  This function attempts to get the local time from the RTC and stores
+ *  it in the provided tm struct. If the initial attempt fails, it retries
+ *  up to the specified number of attempts, with a delay between each try.
+ *  If the function exhausts all attempts without success, it returns false.
+ */
 bool GetTimeFromRTC(tm *timeinfo, int num_tries)
 {
     if (!getLocalTime(timeinfo))
@@ -174,6 +185,19 @@ bool GetTimeFromRTC(tm *timeinfo, int num_tries)
     return true;
 }
 
+/**
+ * @brief Get the current temperature from OpenWeatherMap
+ * @param city The city name
+ * @param apiKey your OpenWeatherMap API key
+ * @return current temperature in Celsius. 99 if no data was received
+ * @details
+ *  This function sends a GET request to the OpenWeatherMap API and
+ *  extracts the temperature from the JSON response. The temperature
+ *  is returned in Celsius. If there was an error with the request or
+ *  if the JSON could not be parsed, the function returns 99.
+ * @warning Spaces in the city name need to be replaced with '%20'
+ *          (e.g. "New York" -> "New%20York")
+ */
 double GetOutdoorTemperature(const char *city, const char *apiKey)
 {
     char URL[256];
@@ -216,6 +240,11 @@ double GetOutdoorTemperature(const char *city, const char *apiKey)
     }
 }
 
+/**
+ * @brief      A safe version of delay() that uses yield() to keep the watchdog happy.
+ *
+ * @param  ms    The time to wait in milliseconds.
+ */
 void SafeDelay(unsigned long ms)
 {
     unsigned long start = millis();
