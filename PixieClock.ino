@@ -35,7 +35,7 @@ uint8_t lastSyncHour = 255;
 #include "Display.h"
 #include <FastLED.h>
 CRGB PIXELS[NUM_SEGS][NUM_LEDS_PER_SEG];
-uint8_t brightness = 150;
+uint8_t brightness = 25;
 
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
@@ -64,6 +64,8 @@ void setup()
     FastLED.addLeds<WS2812B, SEG3_PIN, GRB>(PIXELS[3], NUM_LEDS_PER_SEG);
 
     // Connect to WiFi
+    SetFirstPixels(CRGB::Blue, CRGB::Blue, CRGB::Blue, CRGB::Blue, brightness, PIXELS);
+    Display('W', 'I', 'F', 'I', brightness, CRGB::Blue, CRGB::Blue, CRGB::Blue, CRGB::Blue, PIXELS);
     Serial.print("Connecting to WiFi: ");
     Serial.println(SSID);
     if (isEAP)
@@ -81,6 +83,7 @@ void setup()
     Serial.println("Connected to WiFi");
 
     // Sync time for the first time
+    Display('T', 'I', 'M', 'E', brightness, CRGB::Blue, CRGB::Blue, CRGB::Blue, CRGB::Blue, PIXELS);
     configTime(GMT_TIMEZONE * 3600, 0, NTP_SERVER1, NTP_SERVER2, NTP_SERVER3);
     Serial.println("Syncing time");
     if (!GetTimeFromRTC(&timeinfo, 10))
@@ -154,6 +157,12 @@ void loop()
     //     Serial.println("Long day! Rebooting...");
     //     ESP.restart();
     // }
+
+    CRGB color0 = !gpio_get_level(SENSE_PIN_0) ? CRGB::Green : CRGB::Red;
+    CRGB color1 = !gpio_get_level(SENSE_PIN_1) ? CRGB::Green : CRGB::Red;
+    CRGB color2 = !gpio_get_level(SENSE_PIN_2) ? CRGB::Green : CRGB::Red;
+    CRGB color3 = !gpio_get_level(SENSE_PIN_3) ? CRGB::Green : CRGB::Red;
+    SetFirstPixels(color0, color1, color2, color3, brightness, PIXELS);
 }
 
 /**
