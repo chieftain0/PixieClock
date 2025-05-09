@@ -44,6 +44,24 @@ static const bool patterns[37][NUM_LEDS_PER_SEG] = {
 };
 
 /**
+ * @brief Initialize the LED segments for display
+ * @param pixels a 2D array of CRGB to store the LED data for each segment
+ * @param pins an array of GPIO pins corresponding to each segment
+ * @details
+ *  This function sets up the LED segments by associating each segment
+ *  with its corresponding GPIO pin and initializing the LED data using
+ *  the FastLED library.
+ */
+
+void DisplayInit(CRGB (&pixels)[NUM_SEGS][NUM_LEDS_PER_SEG])
+{
+    FastLED.addLeds<WS2812B, SEG0_PIN, GRB>(pixels[0], NUM_LEDS_PER_SEG);
+    FastLED.addLeds<WS2812B, SEG1_PIN, GRB>(pixels[1], NUM_LEDS_PER_SEG);
+    FastLED.addLeds<WS2812B, SEG2_PIN, GRB>(pixels[2], NUM_LEDS_PER_SEG);
+    FastLED.addLeds<WS2812B, SEG3_PIN, GRB>(pixels[3], NUM_LEDS_PER_SEG);
+}
+
+/**
  * @brief Look up the index from patterns array
  * @param c character to look up
  * @return index in patterns array, or 36 (°) if not found

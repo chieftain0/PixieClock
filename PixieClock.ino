@@ -44,20 +44,17 @@ void setup()
     Serial.begin(115200);
 
     // Initialize GPIO
-    pinMode(SEG0_PIN, OUTPUT);
-    pinMode(SEG1_PIN, OUTPUT);
-    pinMode(SEG2_PIN, OUTPUT);
-    pinMode(SEG3_PIN, OUTPUT);
-    pinMode(SENSE_PIN_0, INPUT);
-    pinMode(SENSE_PIN_1, INPUT);
-    pinMode(SENSE_PIN_2, INPUT);
-    pinMode(SENSE_PIN_3, INPUT);
+    gpio_set_direction(SEG0_PIN, GPIO_MODE_OUTPUT);
+    gpio_set_direction(SEG1_PIN, GPIO_MODE_OUTPUT);
+    gpio_set_direction(SEG2_PIN, GPIO_MODE_OUTPUT);
+    gpio_set_direction(SEG3_PIN, GPIO_MODE_OUTPUT);
+    gpio_set_direction(SENSE_PIN_0, GPIO_MODE_INPUT);
+    gpio_set_direction(SENSE_PIN_1, GPIO_MODE_INPUT);
+    gpio_set_direction(SENSE_PIN_2, GPIO_MODE_INPUT);
+    gpio_set_direction(SENSE_PIN_3, GPIO_MODE_INPUT);
 
     // Initialize LEDs
-    FastLED.addLeds<WS2812B, SEG0_PIN, GRB>(PIXELS[0], NUM_LEDS_PER_SEG);
-    FastLED.addLeds<WS2812B, SEG1_PIN, GRB>(PIXELS[1], NUM_LEDS_PER_SEG);
-    FastLED.addLeds<WS2812B, SEG2_PIN, GRB>(PIXELS[2], NUM_LEDS_PER_SEG);
-    FastLED.addLeds<WS2812B, SEG3_PIN, GRB>(PIXELS[3], NUM_LEDS_PER_SEG);
+    DisplayInit(PIXELS);
 
     // Connect to WiFi
     SetFirstPixels(CRGB::Blue, CRGB::Blue, CRGB::Blue, CRGB::Blue, brightness, PIXELS);
@@ -80,10 +77,10 @@ void setup()
     // Get Geolocation
     Serial.print("Getting Geolocation: ");
     Display('C', 'I', 'T', 'Y', brightness, CRGB::Blue, CRGB::Blue, CRGB::Blue, CRGB::Blue, PIXELS);
-    double temporary;
-    GetCity(city, sizeof(city));
-    CallOpenWeatherMap(city, OPENWEATHERMAP_API_KEY, temporary, timezoneOffset);
-    Serial.println(city);
+    timezoneOffset = GetTzOffsetAndCity(city, sizeof(city));
+    Serial.print(city);
+    Serial.print(", Offset: ");
+    Serial.println(timezoneOffset);
 
     // Sync time for the first time
     Serial.print("Syncing time: ");
@@ -110,10 +107,12 @@ void loop()
     // Check if time needs to be synced
     if (lastSyncHour != timeinfo.tm_hour || timeinfo.tm_year < 125) // 125 is 2025
     {
-        Serial.println("Syncing time");
+        Serial.print("Syncing time: ");
+        Display('T', 'I', 'M', 'E', brightness, CRGB::Blue, CRGB::Blue, CRGB::Blue, CRGB::Blue, PIXELS);
+        configTime(timezoneOffset, 0, NTP_SERVER1, NTP_SERVER2, NTP_SERVER3);
         if (!GetTimeFromRTC(&timeinfo, 10))
         {
-            Serial.println("Failed to sync time. Rebooting...");
+            Serial.println("\nFailed to sync time. Rebooting...");
             ESP.restart();
         }
         lastSyncHour = timeinfo.tm_hour;
@@ -139,19 +138,20 @@ void loop()
             // Request temperature for both modes
             hasRequestedTemp = true;
             DS18.requestTemp();
-            CallOpenWeatherMap(city, OPENWEATHERMAP_API_KEY, OutTemp, timezoneOffset);
+            OutTemp = GetOutdoorTemp(city, OPENWEATHERMAP_API_KEY);
         }
         DisplayTemperature(round(OutTemp), brightness, CRGB::Blue, PIXELS);
     }
 
     // Show room temperature
-    else
+    else if (timeinfo.tm_sec >= 55)
     {
+        static double InTemp = 99;
         if (DS18.readTemp())
         {
-            int temp = round(DS18.getTemp());
-            DisplayTemperature(temp, brightness, CRGB::Green, PIXELS);
+            InTemp = round(DS18.getTemp());
         }
+        DisplayTemperature(InTemp, brightness, CRGB::Green, PIXELS);
         hasRequestedTemp = false;
     }
 
