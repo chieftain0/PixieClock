@@ -11,9 +11,7 @@
 // const char *NTP_SERVER1 = "";
 // const char *NTP_SERVER2 = ""; // Optional
 // const char *NTP_SERVER3 = ""; // Optional
-// const int *GMT_TIMEZONE = 0;
 // const char *OPENWEATHERMAP_API_KEY = "";
-// const char *OPENWEATHERMAP_CITY = "";
 
 
 #define NUM_SEGS 4
