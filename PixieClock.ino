@@ -24,17 +24,17 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>
 */
 
-#include "config.h"
+#include "include/config.h"
 
 #include <WiFi.h>
 
-#include "Time_Temp.h"
+#include "include/Time_Temp.h"
 struct tm timeinfo;
 uint8_t lastSyncHour = 255;
 char city[64] = "London";
 int timezoneOffset = 0;
 
-#include "Display.h"
+#include "include/Display.h"
 #include <FastLED.h>
 CRGB PIXELS[NUM_SEGS][NUM_LEDS_PER_SEG];
 uint8_t brightness = 25;
