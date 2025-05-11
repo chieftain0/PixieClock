@@ -168,3 +168,46 @@ void loop()
     CRGB color3 = !gpio_get_level(SENSE_PIN_3) ? CRGB::Green : CRGB::Red;
     SetFirstPixels(color0, color1, color2, color3, brightness, PIXELS);
 }
+
+/**
+ * @brief      A safe version of delay() that uses yield() to keep the watchdog happy.
+ *
+ * @param  ms    The time to wait in milliseconds.
+ */
+void SafeDelay(unsigned long ms)
+{
+    unsigned long start = millis();
+    while (millis() - start < ms)
+    {
+        yield();
+    }
+}
+
+/**
+ * @brief Synchronizes the system time using the Real Time Clock (RTC)
+ * @param timeinfo A pointer to a tm struct where the synced time will be stored
+ * @param num_tries The maximum number of attempts to retrieve the time
+ * @return True if the time was successfully synchronized, false otherwise
+ * @details
+ *  This function attempts to get the local time from the RTC and stores
+ *  it in the provided tm struct. If the initial attempt fails, it retries
+ *  up to the specified number of attempts, with a delay between each try.
+ *  If the function exhausts all attempts without success, it returns false.
+ */
+bool GetTimeFromRTC(tm *timeinfo, int num_tries)
+{
+    if (!getLocalTime(timeinfo))
+    {
+        int retries = 0;
+        while (!getLocalTime(timeinfo) && retries < num_tries)
+        {
+            SafeDelay(500);
+            retries++;
+        }
+        if (retries >= num_tries)
+        {
+            return false;
+        }
+    }
+    return true;
+}
