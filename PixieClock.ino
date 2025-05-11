@@ -28,10 +28,11 @@
 
 #include <WiFi.h>
 
-#include "include/Time_Temp.h"
+#include "include/WeatherTempLocationUtils.h"
 struct tm timeinfo;
 uint8_t lastSyncHour = 255;
 char city[64] = "London";
+char countryCode[4] = "GB";
 int timezoneOffset = 0;
 
 #include "include/Display.h"
@@ -77,8 +78,10 @@ void setup()
     // Get Geolocation
     Serial.print("Getting Geolocation: ");
     Display('C', 'I', 'T', 'Y', brightness, CRGB::Blue, CRGB::Blue, CRGB::Blue, CRGB::Blue, PIXELS);
-    timezoneOffset = GetTzOffsetAndCity(city, sizeof(city));
+    timezoneOffset = GetTzOffsetAndCity(city, sizeof(city), countryCode, sizeof(countryCode));
     Serial.print(city);
+    Serial.print(", ");
+    Serial.print(countryCode);
     Serial.print(", Offset: ");
     Serial.println(timezoneOffset);
 
@@ -138,7 +141,7 @@ void loop()
             // Request temperature for both modes
             hasRequestedTemp = true;
             DS18.requestTemp();
-            OutTemp = GetOutdoorTemp(city, OPENWEATHERMAP_API_KEY);
+            OutTemp = GetOutdoorTemp(city, countryCode, OPENWEATHERMAP_API_KEY);
         }
         DisplayTemperature(round(OutTemp), brightness, CRGB::Blue, PIXELS);
     }
