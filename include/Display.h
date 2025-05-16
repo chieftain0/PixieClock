@@ -78,7 +78,7 @@ int CharToIndex(char c) // look up the index from patterns array
     {
         return c - 48;
     }
-    else if (c == '°')
+    else if (c == 96) // replace ` in ASCII with °
     {
         return 36;
     }
@@ -188,7 +188,7 @@ void DisplayTemperature(int temp, uint8_t brightness, CRGB color, CRGB (&pixels)
         timePast = millis();
     }
 
-    Display(first_digit + '0', second_digit + '0', '°', 'C', brightness, color, color, blink ? color : CRGB::Black, color, pixels);
+    Display(first_digit + '0', second_digit + '0', '`', 'C', brightness, color, color, blink ? color : CRGB::Black, color, pixels);
 }
 
 /**
