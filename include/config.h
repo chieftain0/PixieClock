@@ -13,7 +13,6 @@
 // const char *NTP_SERVER3 = ""; // Optional
 // const char *OPENWEATHERMAP_API_KEY = "";
 
-
 #define NUM_SEGS 4
 #define NUM_LEDS_PER_SEG 23
 
@@ -28,3 +27,6 @@
 #define SENSE_PIN_3 GPIO_NUM_10
 
 #define DS18_PIN GPIO_NUM_11
+
+#define BUZZER1_PIN GPIO_NUM_47
+#define BUZZER2_PIN GPIO_NUM_48
