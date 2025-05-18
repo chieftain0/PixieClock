@@ -131,6 +131,47 @@ void Display(char c0, char c1, char c2, char c3, uint8_t brightness, CRGB color0
 }
 
 /**
+ * @brief Display a pattern on the 4 segment display
+ * @param index the index in the patterns array to display
+ * @param brightness overall brightness of the LEDs
+ * @param color0 color of the first segment
+ * @param color1 color of the second segment
+ * @param color2 color of the third segment
+ * @param color3 color of the fourth segment
+ * @param pixels the 2D array of CRGBs to store the LED data in
+ * @details
+ *  The pattern is looked up in the patterns array, and the segment
+ *  is filled with the corresponding LEDs. The brightness and color
+ *  are set accordingly.
+ */
+void Display(int index, uint8_t brightness, CRGB color0, CRGB color1, CRGB color2, CRGB color3, CRGB (&pixels)[NUM_SEGS][NUM_LEDS_PER_SEG])
+{
+    FastLED.setBrightness(brightness);
+    CRGB colors[NUM_SEGS] = {color0, color1, color2, color3};
+
+    if (index >= sizeof(patterns) / sizeof(patterns[0]))
+    {
+        return;
+    }
+
+    for (int i = 0; i < NUM_SEGS; i++)
+    {
+        for (int j = 1; j < NUM_LEDS_PER_SEG; j++)
+        {
+            if (patterns[index][j])
+            {
+                pixels[i][j] = colors[i];
+            }
+            else
+            {
+                pixels[i][j] = CRGB::Black;
+            }
+        }
+    }
+    FastLED.show();
+}
+
+/**
  * @brief Display the time on the 4 segment display
  * @param time_struct a tm struct with the current time
  * @param brightness overall brightness of the LEDs

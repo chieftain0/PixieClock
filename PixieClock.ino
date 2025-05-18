@@ -36,7 +36,6 @@ char countryCode[4] = "GB";
 int timezoneOffset = 0;
 
 #include "include/Display.h"
-#include <FastLED.h>
 CRGB PIXELS[NUM_SEGS][NUM_LEDS_PER_SEG];
 uint8_t brightness = 10;
 
