@@ -33,7 +33,7 @@ struct tm timeinfo;
 uint8_t lastSyncHour = 255;
 char city[64] = "London";
 char countryCode[4] = "GB";
-int timezoneOffset = 0;
+long timezoneOffset = 0;
 
 #include "include/Display.h"
 CRGB PIXELS[NUM_SEGS][NUM_LEDS_PER_SEG];
@@ -52,6 +52,10 @@ void setup()
     gpio_set_direction(SENSE_PIN_1, GPIO_MODE_INPUT);
     gpio_set_direction(SENSE_PIN_2, GPIO_MODE_INPUT);
     gpio_set_direction(SENSE_PIN_3, GPIO_MODE_INPUT);
+    gpio_set_direction(BUTTON1_PIN, GPIO_MODE_INPUT);
+    gpio_set_direction(BUTTON2_PIN, GPIO_MODE_INPUT);
+    gpio_set_direction(BUTTON3_PIN, GPIO_MODE_INPUT);
+    gpio_set_direction(BUTTON4_PIN, GPIO_MODE_INPUT);
 
     // Initialize LEDs
     DisplayInit(PIXELS);
@@ -157,18 +161,50 @@ void loop()
         hasRequestedTemp = false;
     }
 
-    // Reboot at midnight every day
-    // if (timeinfo.tm_hour == 0 && timeinfo.tm_min == 0 && timeinfo.tm_sec == 0 && lastSyncHour != 0)
-    // {
-    //     Serial.println("Long day! Rebooting...");
-    //     ESP.restart();
-    // }
-
     CRGB color0 = !gpio_get_level(SENSE_PIN_0) ? CRGB::Green : CRGB::Red;
     CRGB color1 = !gpio_get_level(SENSE_PIN_1) ? CRGB::Green : CRGB::Red;
     CRGB color2 = !gpio_get_level(SENSE_PIN_2) ? CRGB::Green : CRGB::Red;
     CRGB color3 = !gpio_get_level(SENSE_PIN_3) ? CRGB::Green : CRGB::Red;
     SetFirstPixels(color0, color1, color2, color3, brightness, PIXELS);
+
+    // Check for button presses
+    // TODO: Assign functions to buttons
+    static bool button1Flag = false;
+    static bool button2Flag = false;
+    static bool button3Flag = false;
+    static bool button4Flag = false;
+    if (!gpio_get_level(BUTTON1_PIN) && !button1Flag)
+    {
+        button1Flag = true;
+    }
+    else if (gpio_get_level(BUTTON1_PIN) && button1Flag)
+    {
+        button1Flag = false;
+    }
+    if (!gpio_get_level(BUTTON2_PIN) && !button2Flag)
+    {
+        button2Flag = true;
+    }
+    else if (gpio_get_level(BUTTON2_PIN) && button2Flag)
+    {
+        button2Flag = false;
+    }
+    if (!gpio_get_level(BUTTON3_PIN) && !button3Flag)
+    {
+        button3Flag = true;
+    }
+    else if (gpio_get_level(BUTTON3_PIN) && button3Flag)
+    {
+        button3Flag = false;
+    }
+    if (!gpio_get_level(BUTTON4_PIN) && !button4Flag)
+    {
+        button4Flag = true;
+    }
+    else if (gpio_get_level(BUTTON4_PIN) && button4Flag)
+    {
+        button4Flag = false;
+    }
 }
 
 /**
