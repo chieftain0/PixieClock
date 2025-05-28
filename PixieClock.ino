@@ -173,17 +173,33 @@ void loop()
     static bool button2Flag = false;
     static bool button3Flag = false;
     static bool button4Flag = false;
-    if (!gpio_get_level(BUTTON1_PIN) && !button1Flag)
+    if (!gpio_get_level(BUTTON1_PIN) && !button1Flag) // Increase brightness
     {
         button1Flag = true;
+        if (brightness <= 245)
+        {
+            brightness += 10;
+        }
+        else
+        {
+            brightness = 255;
+        }
     }
     else if (gpio_get_level(BUTTON1_PIN) && button1Flag)
     {
         button1Flag = false;
     }
-    if (!gpio_get_level(BUTTON2_PIN) && !button2Flag)
+    if (!gpio_get_level(BUTTON2_PIN) && !button2Flag) // Decrease brightness
     {
         button2Flag = true;
+        if (brightness >= 10)
+        {
+            brightness -= 10;
+        }
+        else
+        {
+            brightness = 0;
+        }
     }
     else if (gpio_get_level(BUTTON2_PIN) && button2Flag)
     {
