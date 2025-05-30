@@ -103,64 +103,101 @@ void setup()
 
 void loop()
 {
-    // Get time for this loop
-    if (!GetTimeFromRTC(&timeinfo, 10))
-    {
-        Serial.println("Failed to sync time. Rebooting...");
-        ESP.restart();
-    }
+    static bool autoMode = true;
+    static bool mode = 0;
+    static long manualModeTimer = 0;
 
-    // Check if time needs to be synced
-    if (lastSyncHour != timeinfo.tm_hour || timeinfo.tm_year < 125) // 125 is 2025
+    static double InTemp = 99;
+    static double OutTemp = 99;
+
+    if (autoMode)
     {
-        Serial.print("Syncing time: ");
-        Display('T', 'I', 'M', 'E', brightness, CRGB::Blue, CRGB::Blue, CRGB::Blue, CRGB::Blue, PIXELS);
-        configTime(timezoneOffset, 0, NTP_SERVER1, NTP_SERVER2, NTP_SERVER3);
+        /*
+            AUTO Mode
+            50 seconds: Show time
+            55 seconds: Show outdoor temperature
+            60 seconds: Show room temperature
+        */
+        // Get time for this loop
         if (!GetTimeFromRTC(&timeinfo, 10))
         {
-            Serial.println("\nFailed to sync time. Rebooting...");
+            Serial.println("Failed to sync time. Rebooting...");
             ESP.restart();
         }
-        lastSyncHour = timeinfo.tm_hour;
-        Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
-    }
 
-    static bool hasRequestedTemp = false;
-    // Show time for first 55 seconds
-    if (timeinfo.tm_sec < 50)
-    {
-        DisplayTime(timeinfo, brightness, CRGB::Red, PIXELS);
-
-        // Set the flag for the next mode
-        hasRequestedTemp = false;
-    }
-
-    // Show outdoor temperature
-    else if (timeinfo.tm_sec >= 50 && timeinfo.tm_sec < 55)
-    {
-        static double OutTemp = 99;
-        if (!hasRequestedTemp)
+        // Check if time needs to be synced
+        if (lastSyncHour != timeinfo.tm_hour || timeinfo.tm_year < 125) // 125 is 2025
         {
-            // Request temperature for both modes
-            hasRequestedTemp = true;
-            DS18.requestTemp();
-            OutTemp = GetOutdoorTemp(city, countryCode, OPENWEATHERMAP_API_KEY);
+            Serial.print("Syncing time: ");
+            Display('T', 'I', 'M', 'E', brightness, CRGB::Blue, CRGB::Blue, CRGB::Blue, CRGB::Blue, PIXELS);
+            configTime(timezoneOffset, 0, NTP_SERVER1, NTP_SERVER2, NTP_SERVER3);
+            if (!GetTimeFromRTC(&timeinfo, 10))
+            {
+                Serial.println("\nFailed to sync time. Rebooting...");
+                ESP.restart();
+            }
+            lastSyncHour = timeinfo.tm_hour;
+            Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
         }
-        DisplayTemperature(round(OutTemp), brightness, CRGB::Blue, PIXELS);
-    }
 
-    // Show room temperature
-    else if (timeinfo.tm_sec >= 55)
-    {
-        static double InTemp = 99;
-        if (DS18.readTemp())
+        static bool hasRequestedTemp = false;
+        // Show time for first 55 seconds
+        if (timeinfo.tm_sec < 50)
         {
-            InTemp = round(DS18.getTemp());
+            DisplayTime(timeinfo, brightness, CRGB::Red, PIXELS);
+
+            // Set the flag for the next mode
+            hasRequestedTemp = false;
         }
-        DisplayTemperature(InTemp, brightness, CRGB::Green, PIXELS);
-        hasRequestedTemp = false;
+
+        // Show outdoor temperature
+        else if (timeinfo.tm_sec >= 50 && timeinfo.tm_sec < 55)
+        {
+            if (!hasRequestedTemp)
+            {
+                // Request temperature for both modes
+                hasRequestedTemp = true;
+                DS18.requestTemp();
+                OutTemp = GetOutdoorTemp(city, countryCode, OPENWEATHERMAP_API_KEY);
+            }
+            DisplayTemperature(round(OutTemp), brightness, CRGB::Blue, PIXELS);
+        }
+
+        // Show room temperature
+        else if (timeinfo.tm_sec >= 55)
+        {
+            if (DS18.readTemp())
+            {
+                InTemp = round(DS18.getTemp());
+            }
+            DisplayTemperature(InTemp, brightness, CRGB::Green, PIXELS);
+            hasRequestedTemp = false;
+        }
+    }
+    else
+    {
+        /*
+            MANUAL Mode
+            Responds to button presses.
+            Each mode is displayed for 5 seconds.
+            Then switches to AUTO mode.
+        */
+        if (mode)
+        {
+            DisplayTemperature(InTemp, brightness, CRGB::Green, PIXELS);
+        }
+        else
+        {
+            DisplayTemperature(OutTemp, brightness, CRGB::Blue, PIXELS);
+        }
+
+        if (millis() - manualModeTimer >= 5000)
+        {
+            autoMode = true;
+        }
     }
 
+    // Set first indicator LEDs
     CRGB color0 = !gpio_get_level(SENSE_PIN_0) ? CRGB::Green : CRGB::Red;
     CRGB color1 = !gpio_get_level(SENSE_PIN_1) ? CRGB::Green : CRGB::Red;
     CRGB color2 = !gpio_get_level(SENSE_PIN_2) ? CRGB::Green : CRGB::Red;
@@ -205,9 +242,13 @@ void loop()
     {
         button2Flag = false;
     }
-    if (!gpio_get_level(BUTTON3_PIN) && !button3Flag)
+    if (!gpio_get_level(BUTTON3_PIN) && !button3Flag) // Switch to manual mode and cycle through modes
     {
         button3Flag = true;
+
+        autoMode = false;
+        mode = !mode;
+        manualModeTimer = millis();
     }
     else if (gpio_get_level(BUTTON3_PIN) && button3Flag)
     {
