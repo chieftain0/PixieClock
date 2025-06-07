@@ -104,7 +104,7 @@ void setup()
 void loop()
 {
     static bool autoMode = true;
-    static bool mode = 0;
+    static bool mode = false;
     static long manualModeTimer = 0;
 
     static double InTemp = 99;
@@ -194,6 +194,7 @@ void loop()
         if (millis() - manualModeTimer >= 5000)
         {
             autoMode = true;
+            mode = 0;
         }
     }
 
@@ -305,4 +306,29 @@ bool GetTimeFromRTC(tm *timeinfo, int num_tries)
         }
     }
     return true;
+}
+
+/**
+ * @brief Generates a tone on the specified buzzer pin.
+ * @param buzzerPin The GPIO pin to output the tone on.
+ * @param frequency The frequency of the tone in Hz.
+ * @param durationMS The duration of the tone in milliseconds.
+ * @details
+ *  This function uses the analogWrite() function to generate a tone.
+ *  The resolution is set to 8 bits, and the frequency is set to the
+ *  specified frequency. The function then waits for the specified
+ *  duration and sets the output to 0 to stop the tone.
+ *  @warning This function is currently blocking. Use with caution.
+ */
+void buzz(gpio_num_t buzzerPin, long frequency, long durationMS)
+{
+    analogWriteResolution(buzzerPin, 8);
+    analogWriteFrequency(buzzerPin, frequency);
+
+    static long start = millis();
+    while (millis() - start < durationMS)
+    {
+        analogWrite(buzzerPin, 128);
+    }
+    analogWrite(buzzerPin, 0);
 }
