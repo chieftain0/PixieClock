@@ -5,7 +5,7 @@
 #include <FastLED.h>
 
 // Character maps
-static const bool patterns[37][NUM_LEDS_PER_SEG] = {
+static const bool patterns[38][NUM_LEDS_PER_SEG] = {
     {0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0}, // 0
     {0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, // 1
     {0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0}, // 2
@@ -43,6 +43,7 @@ static const bool patterns[37][NUM_LEDS_PER_SEG] = {
     {0, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1}, // Y - 34
     {0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 0, 0}, // Z - 35
     {0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0}, // ° - 36
+    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, // SPACE - 37
 };
 //    {0, 1, 0, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1}, // K - 20 (Alternative pattern for K)
 
@@ -82,6 +83,10 @@ int CharToIndex(char c) // look up the index from patterns array
     else if (c == 96) // replace ` in ASCII with °
     {
         return 36;
+    }
+    else if (c == 20) // SPACE
+    {
+        return 37;
     }
     else
     {
@@ -130,7 +135,7 @@ void Display(char c0, char c1, char c2, char c3, uint8_t brightness, CRGB color0
 }
 
 /**
- * @brief Display a pattern on the 4 segment display
+ * @brief Display a pattern on all 4 segments
  * @param index the index in the patterns array to display
  * @param brightness overall brightness of the LEDs
  * @param color0 color of the first segment
