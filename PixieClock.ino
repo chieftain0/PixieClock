@@ -37,7 +37,7 @@ long timezoneOffset = 0;
 
 #include "include/Display.h"
 CRGB PIXELS[NUM_SEGS][NUM_LEDS_PER_SEG];
-uint8_t brightness = 10;
+uint8_t brightness = 5;
 
 void setup()
 {
@@ -214,9 +214,9 @@ void loop()
     if (!gpio_get_level(BUTTON1_PIN) && !button1Flag) // Increase brightness
     {
         button1Flag = true;
-        if (brightness <= 245)
+        if (brightness <= 250)
         {
-            brightness += 10;
+            brightness += 5;
         }
         else
         {
@@ -230,9 +230,9 @@ void loop()
     if (!gpio_get_level(BUTTON2_PIN) && !button2Flag) // Decrease brightness
     {
         button2Flag = true;
-        if (brightness >= 10)
+        if (brightness >= 5)
         {
-            brightness -= 10;
+            brightness -= 5;
         }
         else
         {
