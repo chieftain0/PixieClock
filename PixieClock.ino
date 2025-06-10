@@ -103,6 +103,12 @@ void setup()
 
 void loop()
 {
+    // Reboot every 24 hours
+    if (millis() >= 24 * 3600 * 1000)
+    {
+        ESP.restart();
+    }
+
     static bool autoMode = true;
     static bool mode = false;
     static long manualModeTimer = 0;
