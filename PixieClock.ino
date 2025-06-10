@@ -120,9 +120,9 @@ void loop()
     {
         /*
             AUTO Mode
-            50 seconds: Show time
-            55 seconds: Show outdoor temperature
-            60 seconds: Show room temperature
+            [0, 50) seconds: Show time
+            [50, 55) seconds: Show outdoor temperature
+            [55, 60) seconds: Show room temperature
         */
         // Get time for this loop
         if (!GetTimeFromRTC(&timeinfo, 10))
