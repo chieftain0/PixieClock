@@ -34,7 +34,7 @@
 
 4. Configure the board parameters according to your ESP32-S3-WROOM-1U. See the [datasheet](https://www.espressif.com/sites/default/files/documentation/esp32-s3-wroom-1_wroom-1u_datasheet_en.pdf) for details.
 
-5. Configure the confidential information (WiFi credentials, OpenWeatherMap API key, NTP servers) either in [config.h](include/config.h) or by creating a new file called [Secrets.h]() in the [include](include/) folder.
+5. Configure the confidential information (WiFi credentials, OpenWeatherMap API key, NTP servers) either in [config.h](include/config.h) or by creating a new file called [Secrets.h](include/) in the [include](include/) folder.
 
 6. Upload the code and enjoy!
 
