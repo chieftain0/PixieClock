@@ -24,7 +24,7 @@
     ```
 
     or follow the instructions by [Espressif](https://docs.espressif.com/projects/arduino-esp32/en/latest/installing.html).
-2. Clone or download the ValenTtiny repository:
+2. Clone or download the PixieClock repository:
 
     ```bash
     git clone https://github.com/chieftain0/PixieClock.git
