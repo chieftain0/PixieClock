@@ -220,7 +220,11 @@ void loop()
     if (!gpio_get_level(BUTTON1_PIN) && !button1Flag) // Increase brightness
     {
         button1Flag = true;
-        if (brightness <= 250)
+        if (brightness < 5)
+        {
+            brightness += 1;
+        }
+        else if (brightness >= 5 && brightness <= 250)
         {
             brightness += 5;
         }
@@ -236,9 +240,13 @@ void loop()
     if (!gpio_get_level(BUTTON2_PIN) && !button2Flag) // Decrease brightness
     {
         button2Flag = true;
-        if (brightness >= 5)
+        if (brightness >= 10)
         {
             brightness -= 5;
+        }
+        else if (brightness > 0 && brightness <= 5)
+        {
+            brightness -= 1;
         }
         else
         {
