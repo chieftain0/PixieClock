@@ -42,10 +42,10 @@ uint8_t brightness = 5;
 namespace Colors
 {
     // Message
-    constexpr uint32_t MessageChar0 = CRGB::Indigo;
-    constexpr uint32_t MessageChar1 = CRGB::Magenta;
-    constexpr uint32_t MessageChar2 = CRGB::Indigo;
-    constexpr uint32_t MessageChar3 = CRGB::Magenta;
+    constexpr uint32_t MessageChar0 = CRGB::Fuchsia;
+    constexpr uint32_t MessageChar1 = CRGB::Crimson;
+    constexpr uint32_t MessageChar2 = CRGB::Fuchsia;
+    constexpr uint32_t MessageChar3 = CRGB::Crimson;
 
     // Time
     constexpr uint32_t TimeHourTens = CRGB::Red;
@@ -54,16 +54,16 @@ namespace Colors
     constexpr uint32_t TimeMinOnes = CRGB::Orange;
 
     // Outdoor
-    constexpr uint32_t OutdoorTempTens = CRGB::Purple;
-    constexpr uint32_t OutdoorTempOnes = CRGB::Blue;
-    constexpr uint32_t OutdoorTempDeg = CRGB::Purple;
-    constexpr uint32_t OutdoorTempCelsius = CRGB::Blue;
+    constexpr uint32_t OutdoorTempTens = CRGB::Blue;
+    constexpr uint32_t OutdoorTempOnes = CRGB::Gold;
+    constexpr uint32_t OutdoorTempDeg = CRGB::Blue;
+    constexpr uint32_t OutdoorTempCelsius = CRGB::Gold;
 
     // Indoor
     constexpr uint32_t IndoorTempTens = CRGB::Green;
-    constexpr uint32_t IndoorTempOnes = CRGB::Gold;
+    constexpr uint32_t IndoorTempOnes = CRGB::White;
     constexpr uint32_t IndoorTempDeg = CRGB::Green;
-    constexpr uint32_t IndoorTempCelsius = CRGB::Gold;
+    constexpr uint32_t IndoorTempCelsius = CRGB::White;
 }
 
 void setup()
