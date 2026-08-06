@@ -8,7 +8,7 @@
     '------------------------------------------------'
 
     PixieClock
-    Copyright (C) 2025  Behruz Erkinov
+    Copyright (C) 2026 Behruz Erkinov
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -39,9 +39,36 @@ long timezoneOffset = 0;
 CRGB PIXELS[NUM_SEGS][NUM_LEDS_PER_SEG];
 uint8_t brightness = 5;
 
+namespace Colors
+{
+    // Message
+    constexpr uint32_t MessageChar0 = CRGB::Indigo;
+    constexpr uint32_t MessageChar1 = CRGB::Magenta;
+    constexpr uint32_t MessageChar2 = CRGB::Indigo;
+    constexpr uint32_t MessageChar3 = CRGB::Magenta;
+
+    // Time
+    constexpr uint32_t TimeHourTens = CRGB::Red;
+    constexpr uint32_t TimeHourOnes = CRGB::Orange;
+    constexpr uint32_t TimeMinTens = CRGB::Red;
+    constexpr uint32_t TimeMinOnes = CRGB::Orange;
+
+    // Outdoor
+    constexpr uint32_t OutdoorTempTens = CRGB::Purple;
+    constexpr uint32_t OutdoorTempOnes = CRGB::Blue;
+    constexpr uint32_t OutdoorTempDeg = CRGB::Purple;
+    constexpr uint32_t OutdoorTempCelsius = CRGB::Blue;
+
+    // Indoor
+    constexpr uint32_t IndoorTempTens = CRGB::Green;
+    constexpr uint32_t IndoorTempOnes = CRGB::Gold;
+    constexpr uint32_t IndoorTempDeg = CRGB::Green;
+    constexpr uint32_t IndoorTempCelsius = CRGB::Gold;
+}
+
 void setup()
 {
-    Serial.begin(115200);
+    // Serial.begin(115200);
 
     // Initialize GPIO
     gpio_set_direction(SEG0_PIN, GPIO_MODE_OUTPUT);
@@ -62,7 +89,7 @@ void setup()
 
     // Connect to WiFi
     SetFirstPixels(CRGB::Blue, CRGB::Blue, CRGB::Blue, CRGB::Blue, brightness, PIXELS);
-    Display('W', 'I', 'F', 'I', brightness, CRGB::Blue, CRGB::Blue, CRGB::Blue, CRGB::Blue, PIXELS);
+    Display('W', 'I', 'F', 'I', brightness, Colors::MessageChar0, Colors::MessageChar1, Colors::MessageChar2, Colors::MessageChar3, PIXELS);
     Serial.print("Connecting to WiFi: ");
     Serial.println(SSID);
     if (isEAP)
@@ -80,7 +107,7 @@ void setup()
 
     // Get Geolocation
     Serial.print("Getting Geolocation: ");
-    Display('C', 'I', 'T', 'Y', brightness, CRGB::Blue, CRGB::Blue, CRGB::Blue, CRGB::Blue, PIXELS);
+    Display('C', 'I', 'T', 'Y', brightness, Colors::MessageChar0, Colors::MessageChar1, Colors::MessageChar2, Colors::MessageChar3, PIXELS);
     timezoneOffset = GetTzOffsetAndCity(city, sizeof(city), countryCode, sizeof(countryCode));
     Serial.print(city);
     Serial.print(", ");
@@ -90,7 +117,7 @@ void setup()
 
     // Sync time for the first time
     Serial.print("Syncing time: ");
-    Display('T', 'I', 'M', 'E', brightness, CRGB::Blue, CRGB::Blue, CRGB::Blue, CRGB::Blue, PIXELS);
+    Display('T', 'I', 'M', 'E', brightness, Colors::MessageChar0, Colors::MessageChar1, Colors::MessageChar2, Colors::MessageChar3, PIXELS);
     configTime(timezoneOffset, 0, NTP_SERVER1, NTP_SERVER2, NTP_SERVER3);
     if (!GetTimeFromRTC(&timeinfo, 10))
     {
@@ -135,7 +162,7 @@ void loop()
         if (lastSyncHour != timeinfo.tm_hour || timeinfo.tm_year < 125) // 125 is 2025
         {
             Serial.print("Syncing time: ");
-            Display('T', 'I', 'M', 'E', brightness, CRGB::Blue, CRGB::Blue, CRGB::Blue, CRGB::Blue, PIXELS);
+            Display('T', 'I', 'M', 'E', brightness, Colors::MessageChar0, Colors::MessageChar1, Colors::MessageChar2, Colors::MessageChar3, PIXELS);
             configTime(timezoneOffset, 0, NTP_SERVER1, NTP_SERVER2, NTP_SERVER3);
             if (!GetTimeFromRTC(&timeinfo, 10))
             {
@@ -150,7 +177,7 @@ void loop()
         // Show time for first 55 seconds
         if (timeinfo.tm_sec < 50)
         {
-            DisplayTime(timeinfo, brightness, CRGB::Red, PIXELS);
+            DisplayTime(timeinfo, brightness, Colors::TimeHourTens, Colors::TimeHourOnes, Colors::TimeMinTens, Colors::TimeMinOnes, PIXELS);
 
             // Set the flag for the next mode
             hasRequestedTemp = false;
@@ -164,9 +191,9 @@ void loop()
                 // Request temperature for both modes
                 hasRequestedTemp = true;
                 DS18.requestTemp();
-                OutTemp = GetOutdoorTemp(city, countryCode, OPENWEATHERMAP_API_KEY);
+                OutTemp = round(GetOutdoorTemp(city, countryCode, OPENWEATHERMAP_API_KEY));
             }
-            DisplayTemperature(round(OutTemp), brightness, CRGB::Blue, PIXELS);
+            DisplayTemperature(OutTemp, brightness, Colors::OutdoorTempTens, Colors::OutdoorTempOnes, Colors::OutdoorTempDeg, Colors::OutdoorTempCelsius, PIXELS);
         }
 
         // Show room temperature
@@ -176,7 +203,7 @@ void loop()
             {
                 InTemp = round(DS18.getTemp());
             }
-            DisplayTemperature(InTemp, brightness, CRGB::Green, PIXELS);
+            DisplayTemperature(InTemp, brightness, Colors::IndoorTempTens, Colors::IndoorTempOnes, Colors::IndoorTempDeg, Colors::IndoorTempCelsius, PIXELS);
             hasRequestedTemp = false;
         }
     }
@@ -190,11 +217,11 @@ void loop()
         */
         if (mode)
         {
-            DisplayTemperature(InTemp, brightness, CRGB::Green, PIXELS);
+            DisplayTemperature(InTemp, brightness, Colors::IndoorTempTens, Colors::IndoorTempOnes, Colors::IndoorTempDeg, Colors::IndoorTempCelsius, PIXELS);
         }
         else
         {
-            DisplayTemperature(OutTemp, brightness, CRGB::Blue, PIXELS);
+            DisplayTemperature(OutTemp, brightness, Colors::OutdoorTempTens, Colors::OutdoorTempOnes, Colors::OutdoorTempDeg, Colors::OutdoorTempCelsius, PIXELS);
         }
 
         if (millis() - manualModeTimer >= 5000)

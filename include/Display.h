@@ -61,6 +61,7 @@ void DisplayInit(CRGB (&pixels)[NUM_SEGS][NUM_LEDS_PER_SEG])
     FastLED.addLeds<WS2812B, SEG1_PIN, GRB>(pixels[1], NUM_LEDS_PER_SEG);
     FastLED.addLeds<WS2812B, SEG2_PIN, GRB>(pixels[2], NUM_LEDS_PER_SEG);
     FastLED.addLeds<WS2812B, SEG3_PIN, GRB>(pixels[3], NUM_LEDS_PER_SEG);
+    FastLED.setCorrection(TypicalLEDStrip);
 }
 
 /**
@@ -209,6 +210,42 @@ void DisplayTime(tm &time_struct, uint8_t brightness, CRGB color, CRGB (&pixels)
 }
 
 /**
+ * @brief Display the time on the 4 segment display
+ * @param time_struct a tm struct with the current time
+ * @param brightness overall brightness of the LEDs
+ * @param color0 color of the first segment
+ * @param color1 color of the second segment
+ * @param color2 color of the third segment
+ * @param color3 color of the fourth segment
+ * @param pixels the 2D array of CRGBs to store the LED data in
+ * @details
+ *  The time is displayed in the format HHMM, with the first digit
+ *  of the hour on the first segment, the second digit of the hour
+ *  on the second segment, the first digit of the minute on the third
+ *  segment, and the second digit of the minute on the fourth segment.
+ *  The display is updated every 500 milliseconds to blink the last digit.
+ */
+void DisplayTime(tm &time_struct, uint8_t brightness, CRGB color0, CRGB color1, CRGB color2, CRGB color3, CRGB (&pixels)[NUM_SEGS][NUM_LEDS_PER_SEG])
+{
+    static unsigned long timePast = 0;
+    static bool blink = false;
+
+    uint8_t hour[2], minute[2];
+    hour[0] = time_struct.tm_hour / 10;
+    hour[1] = time_struct.tm_hour % 10;
+    minute[0] = time_struct.tm_min / 10;
+    minute[1] = time_struct.tm_min % 10;
+
+    if (millis() - timePast >= 1000)
+    {
+        blink = !blink;
+        timePast = millis();
+    }
+
+    Display(hour[0] + '0', hour[1] + '0', minute[0] + '0', minute[1] + '0', brightness, color0, color1, color2, blink ? color3 : CRGB::Black, pixels);
+}
+
+/**
  * @brief Display the temperature on the 4 segment display
  * @param temp the temperature as an integer (e.g. 25 for 25 degrees Celsius)
  * @param brightness overall brightness of the LEDs
@@ -236,6 +273,39 @@ void DisplayTemperature(int temp, uint8_t brightness, CRGB color, CRGB (&pixels)
     }
 
     Display(first_digit + '0', second_digit + '0', '`', 'C', brightness, color, color, blink ? color : CRGB::Black, color, pixels);
+}
+
+/**
+ * @brief Display the temperature on the 4 segment display
+ * @param temp the temperature as an integer (e.g. 25 for 25 degrees Celsius)
+ * @param brightness overall brightness of the LEDs
+ * @param color0 color of the first LED segment
+ * @param color1 color of the second LED segment
+ * @param color2 color of the third LED segment
+ * @param color3 color of the fourth LED segment
+ * @param pixels the 2D array of CRGBs to store the LED data in
+ * @details
+ *  The temperature is displayed in the format XX°C, with the first digit
+ *  of the temperature on the first segment, the second digit of the
+ *  temperature on the second segment, the degree symbol on the third
+ *  segment, and the letter 'C' on the fourth segment.
+ *  The display is updated every 500 milliseconds to blink the third (°) digit.
+ */
+void DisplayTemperature(int temp, uint8_t brightness, CRGB color0, CRGB color1, CRGB color2, CRGB color3, CRGB (&pixels)[NUM_SEGS][NUM_LEDS_PER_SEG])
+{
+    static unsigned long timePast = 0;
+    static bool blink = false;
+
+    int first_digit = temp / 10;
+    int second_digit = temp % 10;
+
+    if (millis() - timePast >= 1000)
+    {
+        blink = !blink;
+        timePast = millis();
+    }
+
+    Display(first_digit + '0', second_digit + '0', '`', 'C', brightness, color0, color1, blink ? color2 : CRGB::Black, color3, pixels);
 }
 
 /**
