@@ -341,3 +341,40 @@ bool GetTimeFromRTC(tm *timeinfo, int num_tries)
     }
     return true;
 }
+
+/**
+ * @brief Sets up the buzzer pins for tone generation.
+ * @param frequency The frequency of buzzer the tone in Hz.
+ * @details
+ * This function initializes the buzzer pins for tone generation by setting
+ * the PWM frequency and resolution. It prepares the buzzer pins to generate
+ * tones at the specified frequency.
+ *  @warning This function should be called before using the buzz() function.
+ */
+void buzz_setup(uint32_t frequency)
+{
+    analogWriteResolution(BUZZER1_PIN, 8);
+    analogWriteResolution(BUZZER2_PIN, 8);
+    analogWriteFrequency(BUZZER1_PIN, frequency);
+    analogWriteFrequency(BUZZER2_PIN, frequency);
+}
+
+/**
+ * @brief Generates a tone on the specified buzzer pin.
+ * @param frequency The frequency of the tone in Hz.
+ * @param durationMS The duration of the tone in milliseconds.
+ * @details
+ * This function generates a tone on the buzzer for the specified duration.
+ * It uses the analogWrite function to set the duty cycle of the PWM signal,
+ * which controls the volume of the tone. After the specified duration,
+ * the buzzer is turned off.
+ *  @warning This function is currently blocking. Use with caution.
+ */
+void buzz(uint8_t duty_cycle, long durationMS)
+{
+    analogWrite(BUZZER1_PIN, duty_cycle);
+    analogWrite(BUZZER2_PIN, duty_cycle);
+    SafeDelay(durationMS);
+    analogWrite(BUZZER1_PIN, 0);
+    analogWrite(BUZZER2_PIN, 0);
+}
