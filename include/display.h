@@ -240,6 +240,11 @@ void DisplayTemperature(int temp, CRGB color0, CRGB color1, CRGB color2, CRGB co
     static bool blink = false;
     bool negative_temp = false;
 
+    if (temp > 99 || temp < -99)
+    {
+        return; // Are you okay?
+    }
+
     if (temp < 0)
     {
         temp = -temp;

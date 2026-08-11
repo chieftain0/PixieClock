@@ -56,6 +56,9 @@ void setup()
     gpio_set_direction(BUTTON3_PIN, GPIO_MODE_INPUT);
     gpio_set_direction(BUTTON4_PIN, GPIO_MODE_INPUT);
 
+    // Initialize buzzers
+    buzz_setup(BUZZER_FREQ_HZ);
+
     // Initialize LEDs
     DisplayInit(PIXELS);
 
@@ -220,8 +223,11 @@ void loop()
     static bool button2Flag = false;
     static bool button3Flag = false;
     static bool button4Flag = false;
+
+    // Button 1
     if (!gpio_get_level(BUTTON1_PIN) && !button1Flag) // Increase brightness
     {
+        buzz(127, 100);
         button1Flag = true;
         if (brightness < 5)
         {
@@ -240,8 +246,11 @@ void loop()
     {
         button1Flag = false;
     }
+
+    // Button 2
     if (!gpio_get_level(BUTTON2_PIN) && !button2Flag) // Decrease brightness
     {
+        buzz(127, 100);
         button2Flag = true;
         if (brightness >= 10)
         {
@@ -260,8 +269,11 @@ void loop()
     {
         button2Flag = false;
     }
+
+    // Button 3
     if (!gpio_get_level(BUTTON3_PIN) && !button3Flag) // Switch to manual mode and cycle through modes
     {
+        buzz(127, 100);
         button3Flag = true;
 
         autoMode = false;
@@ -272,8 +284,11 @@ void loop()
     {
         button3Flag = false;
     }
+
+    // Button 4
     if (!gpio_get_level(BUTTON4_PIN) && !button4Flag)
     {
+        buzz(127, 100);
         button4Flag = true;
     }
     else if (gpio_get_level(BUTTON4_PIN) && button4Flag)
@@ -325,29 +340,4 @@ bool GetTimeFromRTC(tm *timeinfo, int num_tries)
         }
     }
     return true;
-}
-
-/**
- * @brief Generates a tone on the specified buzzer pin.
- * @param buzzerPin The GPIO pin to output the tone on.
- * @param frequency The frequency of the tone in Hz.
- * @param durationMS The duration of the tone in milliseconds.
- * @details
- *  This function uses the analogWrite() function to generate a tone.
- *  The resolution is set to 8 bits, and the frequency is set to the
- *  specified frequency. The function then waits for the specified
- *  duration and sets the output to 0 to stop the tone.
- *  @warning This function is currently blocking. Use with caution.
- */
-void buzz(gpio_num_t buzzerPin, long frequency, long durationMS)
-{
-    analogWriteResolution(buzzerPin, 8);
-    analogWriteFrequency(buzzerPin, frequency);
-
-    static long start = millis();
-    while (millis() - start < durationMS)
-    {
-        analogWrite(buzzerPin, 128);
-    }
-    analogWrite(buzzerPin, 0);
 }
