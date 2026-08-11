@@ -1,8 +1,9 @@
 #pragma once
 
-#include "config.h"
-
+#include <Arduino.h>
 #include <FastLED.h>
+
+#include "config.h"
 
 // Character maps
 static const bool patterns[38][NUM_LEDS_PER_SEG] = {
@@ -67,7 +68,7 @@ void DisplayInit(CRGB (&pixels)[NUM_SEGS][NUM_LEDS_PER_SEG])
 /**
  * @brief Look up the index from patterns array
  * @param c character to look up
- * @return index in patterns array, or 36 (°) if not found
+ * @return index in patterns array, or 15 (F) if not found
  * @details
  * 0-9 is 0-9 and A-Z is 10-35, '°' is 36
  */
@@ -85,7 +86,7 @@ int CharToIndex(char c) // look up the index from patterns array
     {
         return 36;
     }
-    else if (c == 20) // SPACE
+    else if (c == ' ') // SPACE
     {
         return 37;
     }
@@ -101,7 +102,6 @@ int CharToIndex(char c) // look up the index from patterns array
  * @param c1 character to display on second segment
  * @param c2 character to display on third segment
  * @param c3 character to display on fourth segment
- * @param brightness overall brightness of the LEDs
  * @param color0 color of first segment
  * @param color1 color of second segment
  * @param color2 color of third segment
@@ -109,87 +109,58 @@ int CharToIndex(char c) // look up the index from patterns array
  * @param pixels the 2D array of CRGBs to store the LED data in
  * @details
  *  The characters are looked up in the patterns array, and the segment
- *  is filled with the corresponding LEDs. The brightness and color
- *  are set accordingly.
+ *  is filled with the corresponding LEDs. If the character and color
+ *  are the same as the previous call, the segment is not updated to
+ *  save processing time.
  */
-void Display(char c0, char c1, char c2, char c3, uint8_t brightness, CRGB color0, CRGB color1, CRGB color2, CRGB color3, CRGB (&pixels)[NUM_SEGS][NUM_LEDS_PER_SEG])
+void Display(char c0, char c1, char c2, char c3, CRGB color0, CRGB color1, CRGB color2, CRGB color3, CRGB (&pixels)[NUM_SEGS][NUM_LEDS_PER_SEG])
 {
-    FastLED.setBrightness(brightness);
     CRGB colors[NUM_SEGS] = {color0, color1, color2, color3};
     char chars[NUM_SEGS] = {c0, c1, c2, c3};
+    static char prev_chars[NUM_SEGS] = {' ', ' ', ' ', ' '};
+    static CRGB prev_colors[NUM_SEGS] = {CRGB::Black, CRGB::Black, CRGB::Black, CRGB::Black};
 
     for (int i = 0; i < NUM_SEGS; i++)
     {
-        for (int j = 1; j < NUM_LEDS_PER_SEG; j++)
+        if (chars[i] == prev_chars[i] && colors[i] == prev_colors[i])
         {
-            if (patterns[CharToIndex(chars[i])][j])
+            continue;
+        }
+        else
+        {
+            prev_chars[i] = chars[i];
+            prev_colors[i] = colors[i];
+            for (int j = 1; j < NUM_LEDS_PER_SEG; j++)
             {
-                pixels[i][j] = colors[i];
-            }
-            else
-            {
-                pixels[i][j] = CRGB::Black;
+                if (patterns[CharToIndex(chars[i])][j])
+                {
+                    pixels[i][j] = colors[i];
+                }
+                else
+                {
+                    pixels[i][j] = CRGB::Black;
+                }
             }
         }
     }
-    FastLED.show();
 }
 
 /**
- * @brief Display a pattern on all 4 segments
- * @param index the index in the patterns array to display
- * @param brightness overall brightness of the LEDs
+ * @brief Display the time on the 4 segment display
+ * @param time_struct a tm struct with the current time
  * @param color0 color of the first segment
  * @param color1 color of the second segment
  * @param color2 color of the third segment
  * @param color3 color of the fourth segment
  * @param pixels the 2D array of CRGBs to store the LED data in
  * @details
- *  The pattern is looked up in the patterns array, and the segment
- *  is filled with the corresponding LEDs. The brightness and color
- *  are set accordingly.
- */
-void Display(int index, uint8_t brightness, CRGB color0, CRGB color1, CRGB color2, CRGB color3, CRGB (&pixels)[NUM_SEGS][NUM_LEDS_PER_SEG])
-{
-    FastLED.setBrightness(brightness);
-    CRGB colors[NUM_SEGS] = {color0, color1, color2, color3};
-
-    if (index >= sizeof(patterns) / sizeof(patterns[0]))
-    {
-        return;
-    }
-
-    for (int i = 0; i < NUM_SEGS; i++)
-    {
-        for (int j = 1; j < NUM_LEDS_PER_SEG; j++)
-        {
-            if (patterns[index][j])
-            {
-                pixels[i][j] = colors[i];
-            }
-            else
-            {
-                pixels[i][j] = CRGB::Black;
-            }
-        }
-    }
-    FastLED.show();
-}
-
-/**
- * @brief Display the time on the 4 segment display
- * @param time_struct a tm struct with the current time
- * @param brightness overall brightness of the LEDs
- * @param color color of the LEDs
- * @param pixels the 2D array of CRGBs to store the LED data in
- * @details
  *  The time is displayed in the format HHMM, with the first digit
  *  of the hour on the first segment, the second digit of the hour
  *  on the second segment, the first digit of the minute on the third
  *  segment, and the second digit of the minute on the fourth segment.
- *  The display is updated every 500 milliseconds to blink the last digit.
+ *  The display is updated every 1 second to blink the last digit.
  */
-void DisplayTime(tm &time_struct, uint8_t brightness, CRGB color, CRGB (&pixels)[NUM_SEGS][NUM_LEDS_PER_SEG])
+void DisplayTime(tm &time_struct, CRGB color0, CRGB color1, CRGB color2, CRGB color3, CRGB (&pixels)[NUM_SEGS][NUM_LEDS_PER_SEG])
 {
     static unsigned long timePast = 0;
     static bool blink = false;
@@ -206,79 +177,12 @@ void DisplayTime(tm &time_struct, uint8_t brightness, CRGB color, CRGB (&pixels)
         timePast = millis();
     }
 
-    Display(hour[0] + '0', hour[1] + '0', minute[0] + '0', minute[1] + '0', brightness, color, color, color, blink ? color : CRGB::Black, pixels);
-}
-
-/**
- * @brief Display the time on the 4 segment display
- * @param time_struct a tm struct with the current time
- * @param brightness overall brightness of the LEDs
- * @param color0 color of the first segment
- * @param color1 color of the second segment
- * @param color2 color of the third segment
- * @param color3 color of the fourth segment
- * @param pixels the 2D array of CRGBs to store the LED data in
- * @details
- *  The time is displayed in the format HHMM, with the first digit
- *  of the hour on the first segment, the second digit of the hour
- *  on the second segment, the first digit of the minute on the third
- *  segment, and the second digit of the minute on the fourth segment.
- *  The display is updated every 500 milliseconds to blink the last digit.
- */
-void DisplayTime(tm &time_struct, uint8_t brightness, CRGB color0, CRGB color1, CRGB color2, CRGB color3, CRGB (&pixels)[NUM_SEGS][NUM_LEDS_PER_SEG])
-{
-    static unsigned long timePast = 0;
-    static bool blink = false;
-
-    uint8_t hour[2], minute[2];
-    hour[0] = time_struct.tm_hour / 10;
-    hour[1] = time_struct.tm_hour % 10;
-    minute[0] = time_struct.tm_min / 10;
-    minute[1] = time_struct.tm_min % 10;
-
-    if (millis() - timePast >= 1000)
-    {
-        blink = !blink;
-        timePast = millis();
-    }
-
-    Display(hour[0] + '0', hour[1] + '0', minute[0] + '0', minute[1] + '0', brightness, color0, color1, color2, blink ? color3 : CRGB::Black, pixels);
+    Display(hour[0] + '0', hour[1] + '0', minute[0] + '0', blink ? (minute[1] + '0') : ' ', color0, color1, color2, color3, pixels);
 }
 
 /**
  * @brief Display the temperature on the 4 segment display
  * @param temp the temperature as an integer (e.g. 25 for 25 degrees Celsius)
- * @param brightness overall brightness of the LEDs
- * @param color color of the LEDs
- * @param pixels the 2D array of CRGBs to store the LED data in
- * @details
- *  The temperature is displayed in the format XX°C, with the first digit
- *  of the temperature on the first segment, the second digit of the
- *  temperature on the second segment, the degree symbol on the third
- *  segment, and the letter 'C' on the fourth segment.
- *  The display is updated every 500 milliseconds to blink the third (°) digit.
- */
-void DisplayTemperature(int temp, uint8_t brightness, CRGB color, CRGB (&pixels)[NUM_SEGS][NUM_LEDS_PER_SEG])
-{
-    static unsigned long timePast = 0;
-    static bool blink = false;
-
-    int first_digit = temp / 10;
-    int second_digit = temp % 10;
-
-    if (millis() - timePast >= 1000)
-    {
-        blink = !blink;
-        timePast = millis();
-    }
-
-    Display(first_digit + '0', second_digit + '0', '`', 'C', brightness, color, color, blink ? color : CRGB::Black, color, pixels);
-}
-
-/**
- * @brief Display the temperature on the 4 segment display
- * @param temp the temperature as an integer (e.g. 25 for 25 degrees Celsius)
- * @param brightness overall brightness of the LEDs
  * @param color0 color of the first LED segment
  * @param color1 color of the second LED segment
  * @param color2 color of the third LED segment
@@ -289,9 +193,9 @@ void DisplayTemperature(int temp, uint8_t brightness, CRGB color, CRGB (&pixels)
  *  of the temperature on the first segment, the second digit of the
  *  temperature on the second segment, the degree symbol on the third
  *  segment, and the letter 'C' on the fourth segment.
- *  The display is updated every 500 milliseconds to blink the third (°) digit.
+ *  The display is updated every 1 second to blink the third (°) digit.
  */
-void DisplayTemperature(int temp, uint8_t brightness, CRGB color0, CRGB color1, CRGB color2, CRGB color3, CRGB (&pixels)[NUM_SEGS][NUM_LEDS_PER_SEG])
+void DisplayTemperature(int temp, CRGB color0, CRGB color1, CRGB color2, CRGB color3, CRGB (&pixels)[NUM_SEGS][NUM_LEDS_PER_SEG])
 {
     static unsigned long timePast = 0;
     static bool blink = false;
@@ -305,7 +209,7 @@ void DisplayTemperature(int temp, uint8_t brightness, CRGB color0, CRGB color1, 
         timePast = millis();
     }
 
-    Display(first_digit + '0', second_digit + '0', '`', 'C', brightness, color0, color1, blink ? color2 : CRGB::Black, color3, pixels);
+    Display(first_digit + '0', second_digit + '0', blink ? '`' : ' ', 'C', color0, color1, color2, color3, pixels);
 }
 
 /**
@@ -319,12 +223,21 @@ void DisplayTemperature(int temp, uint8_t brightness, CRGB color0, CRGB color1, 
  *  This function is used to set the first LED of each segment to
  *  a different color. This is useful for debugging purposes.
  */
-void SetFirstPixels(CRGB color0, CRGB color1, CRGB color2, CRGB color3, uint8_t brightness, CRGB (&pixels)[NUM_SEGS][NUM_LEDS_PER_SEG])
+void SetFirstPixels(CRGB color0, CRGB color1, CRGB color2, CRGB color3, CRGB (&pixels)[NUM_SEGS][NUM_LEDS_PER_SEG])
 {
-    FastLED.setBrightness(brightness);
     pixels[0][0] = color0;
     pixels[1][0] = color1;
     pixels[2][0] = color2;
     pixels[3][0] = color3;
+}
+
+void UpdateDisplay(uint8_t brightness, CRGB (&pixels)[NUM_SEGS][NUM_LEDS_PER_SEG])
+{
+    static uint8_t prev_brightness = 0;
+    if (brightness != prev_brightness)
+    {
+        prev_brightness = brightness;
+        FastLED.setBrightness(brightness);
+    }
     FastLED.show();
 }

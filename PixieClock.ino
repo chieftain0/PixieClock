@@ -24,20 +24,19 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>
 */
 
-#include "include/config.h"
-
 #include <WiFi.h>
+#include "include/config.h"
+#include "include/display.h"
+#include "include/wtl_utils.h"
 
-#include "include/WeatherTempLocationUtils.h"
 struct tm timeinfo;
 uint8_t lastSyncHour = 255;
 char city[64] = "London";
 char countryCode[4] = "GB";
 long timezoneOffset = 0;
 
-#include "include/Display.h"
 CRGB PIXELS[NUM_SEGS][NUM_LEDS_PER_SEG];
-uint8_t brightness = 5;
+uint8_t brightness = 10;
 
 namespace Colors
 {
@@ -88,8 +87,9 @@ void setup()
     DisplayInit(PIXELS);
 
     // Connect to WiFi
-    SetFirstPixels(CRGB::Blue, CRGB::Blue, CRGB::Blue, CRGB::Blue, brightness, PIXELS);
-    Display('W', 'I', 'F', 'I', brightness, Colors::MessageChar0, Colors::MessageChar1, Colors::MessageChar2, Colors::MessageChar3, PIXELS);
+    SetFirstPixels(CRGB::Blue, CRGB::Blue, CRGB::Blue, CRGB::Blue, PIXELS);
+    Display('W', 'I', 'F', 'I', Colors::MessageChar0, Colors::MessageChar1, Colors::MessageChar2, Colors::MessageChar3, PIXELS);
+    UpdateDisplay(brightness, PIXELS);
     Serial.print("Connecting to WiFi: ");
     Serial.println(SSID);
     if (isEAP)
@@ -107,7 +107,8 @@ void setup()
 
     // Get Geolocation
     Serial.print("Getting Geolocation: ");
-    Display('C', 'I', 'T', 'Y', brightness, Colors::MessageChar0, Colors::MessageChar1, Colors::MessageChar2, Colors::MessageChar3, PIXELS);
+    Display('C', 'I', 'T', 'Y', Colors::MessageChar0, Colors::MessageChar1, Colors::MessageChar2, Colors::MessageChar3, PIXELS);
+    UpdateDisplay(brightness, PIXELS);
     timezoneOffset = GetTzOffsetAndCity(city, sizeof(city), countryCode, sizeof(countryCode));
     Serial.print(city);
     Serial.print(", ");
@@ -117,7 +118,8 @@ void setup()
 
     // Sync time for the first time
     Serial.print("Syncing time: ");
-    Display('T', 'I', 'M', 'E', brightness, Colors::MessageChar0, Colors::MessageChar1, Colors::MessageChar2, Colors::MessageChar3, PIXELS);
+    Display('T', 'I', 'M', 'E', Colors::MessageChar0, Colors::MessageChar1, Colors::MessageChar2, Colors::MessageChar3, PIXELS);
+    UpdateDisplay(brightness, PIXELS);
     configTime(timezoneOffset, 0, NTP_SERVER1, NTP_SERVER2, NTP_SERVER3);
     if (!GetTimeFromRTC(&timeinfo, 10))
     {
@@ -162,7 +164,8 @@ void loop()
         if (lastSyncHour != timeinfo.tm_hour || timeinfo.tm_year < 125) // 125 is 2025
         {
             Serial.print("Syncing time: ");
-            Display('T', 'I', 'M', 'E', brightness, Colors::MessageChar0, Colors::MessageChar1, Colors::MessageChar2, Colors::MessageChar3, PIXELS);
+            Display('T', 'I', 'M', 'E', Colors::MessageChar0, Colors::MessageChar1, Colors::MessageChar2, Colors::MessageChar3, PIXELS);
+            UpdateDisplay(brightness, PIXELS);
             configTime(timezoneOffset, 0, NTP_SERVER1, NTP_SERVER2, NTP_SERVER3);
             if (!GetTimeFromRTC(&timeinfo, 10))
             {
@@ -177,7 +180,7 @@ void loop()
         // Show time for first 55 seconds
         if (timeinfo.tm_sec < 50)
         {
-            DisplayTime(timeinfo, brightness, Colors::TimeHourTens, Colors::TimeHourOnes, Colors::TimeMinTens, Colors::TimeMinOnes, PIXELS);
+            DisplayTime(timeinfo, Colors::TimeHourTens, Colors::TimeHourOnes, Colors::TimeMinTens, Colors::TimeMinOnes, PIXELS);
 
             // Set the flag for the next mode
             hasRequestedTemp = false;
@@ -193,7 +196,7 @@ void loop()
                 DS18.requestTemp();
                 OutTemp = round(GetOutdoorTemp(city, countryCode, OPENWEATHERMAP_API_KEY));
             }
-            DisplayTemperature(OutTemp, brightness, Colors::OutdoorTempTens, Colors::OutdoorTempOnes, Colors::OutdoorTempDeg, Colors::OutdoorTempCelsius, PIXELS);
+            DisplayTemperature(OutTemp, Colors::OutdoorTempTens, Colors::OutdoorTempOnes, Colors::OutdoorTempDeg, Colors::OutdoorTempCelsius, PIXELS);
         }
 
         // Show room temperature
@@ -203,7 +206,7 @@ void loop()
             {
                 InTemp = round(DS18.getTemp());
             }
-            DisplayTemperature(InTemp, brightness, Colors::IndoorTempTens, Colors::IndoorTempOnes, Colors::IndoorTempDeg, Colors::IndoorTempCelsius, PIXELS);
+            DisplayTemperature(InTemp, Colors::IndoorTempTens, Colors::IndoorTempOnes, Colors::IndoorTempDeg, Colors::IndoorTempCelsius, PIXELS);
             hasRequestedTemp = false;
         }
     }
@@ -217,11 +220,11 @@ void loop()
         */
         if (mode)
         {
-            DisplayTemperature(InTemp, brightness, Colors::IndoorTempTens, Colors::IndoorTempOnes, Colors::IndoorTempDeg, Colors::IndoorTempCelsius, PIXELS);
+            DisplayTemperature(InTemp, Colors::IndoorTempTens, Colors::IndoorTempOnes, Colors::IndoorTempDeg, Colors::IndoorTempCelsius, PIXELS);
         }
         else
         {
-            DisplayTemperature(OutTemp, brightness, Colors::OutdoorTempTens, Colors::OutdoorTempOnes, Colors::OutdoorTempDeg, Colors::OutdoorTempCelsius, PIXELS);
+            DisplayTemperature(OutTemp, Colors::OutdoorTempTens, Colors::OutdoorTempOnes, Colors::OutdoorTempDeg, Colors::OutdoorTempCelsius, PIXELS);
         }
 
         if (millis() - manualModeTimer >= 5000)
@@ -236,7 +239,7 @@ void loop()
     CRGB color1 = !gpio_get_level(SENSE_PIN_1) ? CRGB::Green : CRGB::Red;
     CRGB color2 = !gpio_get_level(SENSE_PIN_2) ? CRGB::Green : CRGB::Red;
     CRGB color3 = !gpio_get_level(SENSE_PIN_3) ? CRGB::Green : CRGB::Red;
-    SetFirstPixels(color0, color1, color2, color3, brightness, PIXELS);
+    SetFirstPixels(color0, color1, color2, color3, PIXELS);
 
     // Check for button presses
     // TODO: Assign functions to buttons
@@ -304,6 +307,8 @@ void loop()
     {
         button4Flag = false;
     }
+
+    UpdateDisplay(brightness, PIXELS);
 }
 
 /**

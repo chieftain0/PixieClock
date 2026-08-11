@@ -1,7 +1,9 @@
 #pragma once
 
-// modify Secrets.h to manage your credentials:
-#include "Secrets.h"
+#include <Arduino.h>
+
+// modify secrets.h to manage your credentials:
+#include "secrets.h"
 // Otherwise:
 // const bool isEAP = false;
 // const char *SSID = "";
