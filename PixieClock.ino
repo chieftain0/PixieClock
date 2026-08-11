@@ -38,33 +38,6 @@ long timezoneOffset = 0;
 CRGB PIXELS[NUM_SEGS][NUM_LEDS_PER_SEG];
 uint8_t brightness = 10;
 
-namespace Colors
-{
-    // Message
-    constexpr uint32_t MessageChar0 = CRGB::Fuchsia;
-    constexpr uint32_t MessageChar1 = CRGB::Crimson;
-    constexpr uint32_t MessageChar2 = CRGB::Fuchsia;
-    constexpr uint32_t MessageChar3 = CRGB::Crimson;
-
-    // Time
-    constexpr uint32_t TimeHourTens = CRGB::Red;
-    constexpr uint32_t TimeHourOnes = CRGB::Orange;
-    constexpr uint32_t TimeMinTens = CRGB::Red;
-    constexpr uint32_t TimeMinOnes = CRGB::Orange;
-
-    // Outdoor
-    constexpr uint32_t OutdoorTempTens = CRGB::Blue;
-    constexpr uint32_t OutdoorTempOnes = CRGB::Gold;
-    constexpr uint32_t OutdoorTempDeg = CRGB::Blue;
-    constexpr uint32_t OutdoorTempCelsius = CRGB::Gold;
-
-    // Indoor
-    constexpr uint32_t IndoorTempTens = CRGB::Green;
-    constexpr uint32_t IndoorTempOnes = CRGB::White;
-    constexpr uint32_t IndoorTempDeg = CRGB::Green;
-    constexpr uint32_t IndoorTempCelsius = CRGB::White;
-}
-
 void setup()
 {
     // Serial.begin(115200);

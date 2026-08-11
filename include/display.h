@@ -5,8 +5,42 @@
 
 #include "config.h"
 
+/**
+ * @brief Namespace for color constants used in the display
+ * @details
+ *  This namespace contains color constants for different types of
+ *  messages and information displayed on the LED segments. Each
+ *  constant is defined as a CRGB color value.
+ */
+namespace Colors
+{
+    // Message
+    constexpr uint32_t MessageChar0 = CRGB::Fuchsia;
+    constexpr uint32_t MessageChar1 = CRGB::Crimson;
+    constexpr uint32_t MessageChar2 = CRGB::Fuchsia;
+    constexpr uint32_t MessageChar3 = CRGB::Crimson;
+
+    // Time
+    constexpr uint32_t TimeHourTens = CRGB::Red;
+    constexpr uint32_t TimeHourOnes = CRGB::Orange;
+    constexpr uint32_t TimeMinTens = CRGB::Red;
+    constexpr uint32_t TimeMinOnes = CRGB::Orange;
+
+    // Outdoor Temperature
+    constexpr uint32_t OutdoorTempTens = CRGB::Blue;
+    constexpr uint32_t OutdoorTempOnes = CRGB::Gold;
+    constexpr uint32_t OutdoorTempDeg = CRGB::Blue;
+    constexpr uint32_t OutdoorTempCelsius = CRGB::Gold;
+
+    // Indoor
+    constexpr uint32_t IndoorTempTens = CRGB::Green;
+    constexpr uint32_t IndoorTempOnes = CRGB::White;
+    constexpr uint32_t IndoorTempDeg = CRGB::Green;
+    constexpr uint32_t IndoorTempCelsius = CRGB::White;
+}
+
 // Character maps
-static const bool patterns[38][NUM_LEDS_PER_SEG] = {
+static const bool patterns[39][NUM_LEDS_PER_SEG] = {
     {0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0}, // 0
     {0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0}, // 1
     {0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0}, // 2
@@ -44,7 +78,8 @@ static const bool patterns[38][NUM_LEDS_PER_SEG] = {
     {0, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1}, // Y - 34
     {0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 0, 0}, // Z - 35
     {0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0}, // ° - 36
-    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, // SPACE - 37
+    {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0}, // - - 37
+    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, // SPACE - 38
 };
 //    {0, 1, 0, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1}, // K - 20 (Alternative pattern for K)
 
@@ -86,9 +121,13 @@ int CharToIndex(char c) // look up the index from patterns array
     {
         return 36;
     }
-    else if (c == ' ') // SPACE
+    else if (c == '-') // -
     {
         return 37;
+    }
+    else if (c == ' ') // SPACE
+    {
+        return 38;
     }
     else
     {
@@ -199,6 +238,13 @@ void DisplayTemperature(int temp, CRGB color0, CRGB color1, CRGB color2, CRGB co
 {
     static unsigned long timePast = 0;
     static bool blink = false;
+    bool negative_temp = false;
+
+    if (temp < 0)
+    {
+        temp = -temp;
+        negative_temp = true;
+    }
 
     int first_digit = temp / 10;
     int second_digit = temp % 10;
@@ -209,7 +255,14 @@ void DisplayTemperature(int temp, CRGB color0, CRGB color1, CRGB color2, CRGB co
         timePast = millis();
     }
 
-    Display(first_digit + '0', second_digit + '0', blink ? '`' : ' ', 'C', color0, color1, color2, color3, pixels);
+    if (negative_temp == false)
+    {
+        Display(first_digit + '0', second_digit + '0', blink ? '`' : ' ', 'C', color0, color1, color2, color3, pixels);
+    }
+    else
+    {
+        Display('-', first_digit + '0', second_digit + '0', blink ? '`' : 'C', color0, color1, color2, color3, pixels);
+    }
 }
 
 /**
