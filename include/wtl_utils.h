@@ -62,28 +62,37 @@ char *URLencodeSpaces(const char *str)
 }
 
 /**
- * @brief Get the current outdoor temperature in degrees Celsius
+ * @brief Fetch the current outdoor temperature, sunrise, and sunset times
  * @param city the city name
  * @param countryCode the country code of the city
  * @param apiKey the API key for OpenWeatherMap
- * @return the current outdoor temperature in degrees Celsius or 99 if there was an error
+ * @param OutdoorTemp[out] the current outdoor temperature in degrees Celsius, or 99 if there was an error
+ * @param SunriseEpoch[out] sunrise time as a Unix epoch timestamp in current timezone, or 0 if there was an error
+ * @param SunsetEpoch[out] sunset time as a Unix epoch timestamp in current timezone, or 0 if there was an error
+ * @return 0 on success, 1 on error
  * @details
  *  This function sends a GET request to OpenWeatherMap's weather API and
- *  extracts the current temperature from the JSON response. If there was
- *  an error with the request or if the JSON could not be parsed, the
- *  function returns 99.
+ *  extracts the current temperature, sunrise, and sunset from the JSON
+ *  response. If there was an error with the request or if the JSON could
+ *  not be parsed, OutdoorTemp is set to 99 and the epochs to 0.
  */
-double GetOutdoorTemp(const char *city, const char *countryCode, const char *apiKey)
+uint8_t FetchOutdoorData(const char *city, const char *countryCode, const char *apiKey, double &OutdoorTemp, uint32_t &SunriseEpoch, uint32_t &SunsetEpoch)
 {
     if (city == NULL || apiKey == NULL)
     {
-        return 99;
+        OutdoorTemp = 99;
+        SunriseEpoch = 0;
+        SunsetEpoch = 0;
+        return 1;
     }
 
     char *cityEncoded = URLencodeSpaces(city);
     if (cityEncoded == NULL)
     {
-        return 99;
+        OutdoorTemp = 99;
+        SunriseEpoch = 0;
+        SunsetEpoch = 0;
+        return 1;
     }
 
     char URL[256];
@@ -97,7 +106,7 @@ double GetOutdoorTemp(const char *city, const char *countryCode, const char *api
     HTTPClient http;
     http.begin(URL);
     int httpCode = http.GET();
-    if (httpCode > 0)
+    if (httpCode == HTTP_CODE_OK)
     {
         DynamicJsonDocument doc(JSON_BUFFER_SIZE);
         DeserializationError error = deserializeJson(doc, http.getStream());
@@ -106,15 +115,23 @@ double GetOutdoorTemp(const char *city, const char *countryCode, const char *api
 
         if (error)
         {
-            return 99;
+            OutdoorTemp = 99;
+            SunriseEpoch = 0;
+            SunsetEpoch = 0;
+            return 1;
         }
-        double temp = doc["main"]["temp"];
-        return temp;
+        OutdoorTemp = (double)doc["main"]["temp"];
+        SunriseEpoch = (uint32_t)doc["sys"]["sunrise"] + (int32_t)doc["timezone"];
+        SunsetEpoch = (uint32_t)doc["sys"]["sunset"] + (int32_t)doc["timezone"];
+        return 0;
     }
     else
     {
         http.end();
-        return 99;
+        OutdoorTemp = 99;
+        SunriseEpoch = 0;
+        SunsetEpoch = 0;
+        return 1;
     }
 }
 
@@ -133,12 +150,12 @@ double GetOutdoorTemp(const char *city, const char *countryCode, const char *api
  *  If there is an error, the function returns 0.
  */
 
-int GetTzOffsetAndCity(char *city, size_t cityArrSize, char *countryCode, size_t countryCodeArrSize)
+int32_t GetTzOffsetAndCity(char *city, size_t cityArrSize, char *countryCode, size_t countryCodeArrSize)
 {
     HTTPClient http;
     http.begin("http://ip-api.com/json/?fields=countryCode,city,offset");
     int httpCode = http.GET();
-    if (httpCode > 0)
+    if (httpCode == HTTP_CODE_OK)
     {
         DynamicJsonDocument doc(JSON_BUFFER_SIZE);
         DeserializationError error = deserializeJson(doc, http.getStream());

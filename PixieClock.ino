@@ -33,10 +33,14 @@ struct tm timeinfo;
 uint8_t lastSyncHour = 255;
 char city[64] = "London";
 char countryCode[4] = "GB";
-long timezoneOffset = 0;
+int32_t timezoneOffset = 0;
+bool isSunUp = false;
 
 CRGB PIXELS[NUM_SEGS][NUM_LEDS_PER_SEG];
-uint8_t brightness = 10;
+uint8_t brightness = 5;
+
+uint8_t buzzer_duty_cycle = 10;
+uint8_t buzzer_duration_ms = 100;
 
 void setup()
 {
@@ -120,6 +124,8 @@ void loop()
 
     static double InTemp = 99;
     static double OutTemp = 99;
+    static uint32_t SunriseTime = 0;
+    static uint32_t SunsetTime = 0;
 
     if (autoMode)
     {
@@ -152,38 +158,70 @@ void loop()
             Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
         }
 
-        static bool hasRequestedTemp = false;
+        static bool hasRequestedInAndOutData = false;
         // Show time for first 55 seconds
         if (timeinfo.tm_sec < 50)
         {
             DisplayTime(timeinfo, Colors::TimeHourTens, Colors::TimeHourOnes, Colors::TimeMinTens, Colors::TimeMinOnes, PIXELS);
 
             // Set the flag for the next mode
-            hasRequestedTemp = false;
+            hasRequestedInAndOutData = false;
         }
 
-        // Show outdoor temperature
+        // Fetch outdoor and indoor data
         else if (timeinfo.tm_sec >= 50 && timeinfo.tm_sec < 55)
         {
-            if (!hasRequestedTemp)
+            if (!hasRequestedInAndOutData)
             {
                 // Request temperature for both modes
-                hasRequestedTemp = true;
+                hasRequestedInAndOutData = true;
                 DS18.requestTemp();
-                OutTemp = round(GetOutdoorTemp(city, countryCode, OPENWEATHERMAP_API_KEY));
+                FetchOutdoorData(city, countryCode, OPENWEATHERMAP_API_KEY, OutTemp, SunriseTime, SunsetTime);
+
+                // Sunset and Sunrise times are in current tz epoch format. Convert them to seconds since midnight for easier comparison with current time.
+                SunriseTime = SunriseTime % 86400; // Seconds since midnight
+                SunsetTime = SunsetTime % 86400;   // Seconds since midnight
+                uint32_t currentTimeInSeconds = timeinfo.tm_hour * 3600 + timeinfo.tm_min * 60 + timeinfo.tm_sec;
+
+                if (currentTimeInSeconds >= SunriseTime && currentTimeInSeconds < SunsetTime && isSunUp == false)
+                {
+                    isSunUp = true;
+                    if (brightness < 128)
+                    {
+                        brightness = brightness * 2; // Double the brightness when the sun is up
+                    }
+                    else
+                    {
+                        brightness = 255; // Set to max brightness if it was already high
+                    }
+                }
+                if ((currentTimeInSeconds < SunriseTime || currentTimeInSeconds >= SunsetTime) && isSunUp == true)
+                {
+                    isSunUp = false;
+                    if (brightness >= 4)
+                    {
+                        brightness = brightness / 2; // Halve the brightness when the sun is down
+                    }
+                    else
+                    {
+                        brightness = 2; // Set to minimum brightness if it was already low
+                    }
+                }
             }
+
+            // Show outdoor temperature for 5 seconds
             DisplayTemperature(OutTemp, Colors::OutdoorTempTens, Colors::OutdoorTempOnes, Colors::OutdoorTempDeg, Colors::OutdoorTempCelsius, PIXELS);
         }
 
-        // Show room temperature
         else if (timeinfo.tm_sec >= 55)
         {
+            // Read and show indoor temperature for 5 seconds
             if (DS18.readTemp())
             {
                 InTemp = round(DS18.getTemp());
             }
             DisplayTemperature(InTemp, Colors::IndoorTempTens, Colors::IndoorTempOnes, Colors::IndoorTempDeg, Colors::IndoorTempCelsius, PIXELS);
-            hasRequestedTemp = false;
+            hasRequestedInAndOutData = false;
         }
     }
     else
@@ -227,19 +265,22 @@ void loop()
     // Button 1
     if (!gpio_get_level(BUTTON1_PIN) && !button1Flag) // Increase brightness
     {
-        buzz(127, 100);
+        buzz(buzzer_duty_cycle, buzzer_duration_ms);
         button1Flag = true;
-        if (brightness < 5)
+        if (brightness >= 251 && brightness < 255)
         {
-            brightness += 1;
+            brightness = 255;
         }
-        else if (brightness >= 5 && brightness <= 250)
+        else if (brightness == 255)
+        {
+        }
+        else if (brightness >= 5)
         {
             brightness += 5;
         }
         else
         {
-            brightness = 255;
+            brightness += 1;
         }
     }
     else if (gpio_get_level(BUTTON1_PIN) && button1Flag)
@@ -250,19 +291,19 @@ void loop()
     // Button 2
     if (!gpio_get_level(BUTTON2_PIN) && !button2Flag) // Decrease brightness
     {
-        buzz(127, 100);
+        buzz(buzzer_duty_cycle, buzzer_duration_ms);
         button2Flag = true;
-        if (brightness >= 10)
+
+        if (brightness <= 2)
         {
-            brightness -= 5;
         }
-        else if (brightness > 0 && brightness <= 5)
+        else if (brightness <= 5 && brightness > 2)
         {
             brightness -= 1;
         }
         else
         {
-            brightness = 0;
+            brightness -= 5;
         }
     }
     else if (gpio_get_level(BUTTON2_PIN) && button2Flag)
@@ -273,7 +314,7 @@ void loop()
     // Button 3
     if (!gpio_get_level(BUTTON3_PIN) && !button3Flag) // Switch to manual mode and cycle through modes
     {
-        buzz(127, 100);
+        buzz(buzzer_duty_cycle, buzzer_duration_ms);
         button3Flag = true;
 
         autoMode = false;
@@ -288,8 +329,12 @@ void loop()
     // Button 4
     if (!gpio_get_level(BUTTON4_PIN) && !button4Flag)
     {
-        buzz(127, 100);
+        buzz(buzzer_duty_cycle, buzzer_duration_ms);
         button4Flag = true;
+
+        autoMode = false;
+        mode = !mode;
+        manualModeTimer = millis();
     }
     else if (gpio_get_level(BUTTON4_PIN) && button4Flag)
     {
@@ -361,7 +406,7 @@ void buzz_setup(uint32_t frequency)
 
 /**
  * @brief Generates a tone on the specified buzzer pin.
- * @param frequency The frequency of the tone in Hz.
+ * @param duty_cycle The duty cycle of the PWM signal (0-255).
  * @param durationMS The duration of the tone in milliseconds.
  * @details
  * This function generates a tone on the buzzer for the specified duration.
