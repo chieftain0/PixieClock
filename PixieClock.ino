@@ -41,6 +41,9 @@ uint8_t brightness = 5;
 
 uint8_t buzzer_duty_cycle = 10;
 uint8_t buzzer_duration_ms = 100;
+bool buzzerActive = false;
+uint32_t buzzerStart = 0;
+uint32_t buzzerDuration = 0;
 
 void setup()
 {
@@ -80,9 +83,17 @@ void setup()
     {
         WiFi.begin(SSID, PASSWORD);
     }
-    while (WiFi.status() != WL_CONNECTED)
+    uint32_t wifiStart = millis();
+    while (WiFi.status() != WL_CONNECTED && (millis() - wifiStart) < WIFI_TIMEOUT_MS)
     {
         SafeDelay(100);
+    }
+    if (WiFi.status() != WL_CONNECTED)
+    {
+        Display('E', 'R', 'R', 'W', Colors::MessageChar0, Colors::MessageChar1, Colors::MessageChar2, Colors::MessageChar3, PIXELS);
+        UpdateDisplay(brightness, PIXELS);
+        SafeDelay(WIFI_RETRY_PERIOD_MIN * 60 * 1000);
+        ESP.restart();
     }
 
     // Get Geolocation
@@ -342,12 +353,13 @@ void loop()
     }
 
     UpdateDisplay(brightness, PIXELS);
+    buzz_update();
 }
 
 /**
- * @brief      A safe version of delay() that uses yield() to keep the watchdog happy.
+ * @brief A safe version of delay() that uses yield() to keep the watchdog happy.
  *
- * @param  ms    The time to wait in milliseconds.
+ * @param ms The time to wait in milliseconds.
  */
 void SafeDelay(unsigned long ms)
 {
@@ -371,6 +383,10 @@ void SafeDelay(unsigned long ms)
  */
 bool GetTimeFromRTC(tm *timeinfo, int num_tries)
 {
+    if (timeinfo == nullptr || num_tries <= 0)
+    {
+        return false;
+    }
     if (!getLocalTime(timeinfo))
     {
         int retries = 0;
@@ -405,21 +421,40 @@ void buzz_setup(uint32_t frequency)
 }
 
 /**
- * @brief Generates a tone on the specified buzzer pin.
- * @param duty_cycle The duty cycle of the PWM signal (0-255).
- * @param durationMS The duration of the tone in milliseconds.
+ * @brief Starts the buzzer for the specified duration
+ * @param duty_cycle The duty cycle of the PWM signal (0-255)
+ * @param durationMS The duration of the tone in milliseconds
  * @details
- * This function generates a tone on the buzzer for the specified duration.
- * It uses the analogWrite function to set the duty cycle of the PWM signal,
- * which controls the volume of the tone. After the specified duration,
- * the buzzer is turned off.
- *  @warning This function is currently blocking. Use with caution.
+ *  This function starts the buzzer by setting the PWM duty cycle on both
+ *  buzzer pins. It records the start time and duration so the buzzer can
+ *  be turned off by buzz_update().
+ *  This function is non-blocking and returns immediately.
+ * @warning The buzz_update() function must be called regularly to turn off
+ *          the buzzer when the specified duration has elapsed.
  */
-void buzz(uint8_t duty_cycle, long durationMS)
+void buzz(uint8_t duty_cycle, uint32_t durationMS)
 {
     analogWrite(BUZZER1_PIN, duty_cycle);
     analogWrite(BUZZER2_PIN, duty_cycle);
-    SafeDelay(durationMS);
-    analogWrite(BUZZER1_PIN, 0);
-    analogWrite(BUZZER2_PIN, 0);
+    buzzerStart = millis();
+    buzzerDuration = durationMS;
+    buzzerActive = true;
+}
+
+/**
+ * @brief Updates the buzzer state
+ * @details
+ *  This function checks whether the buzzer has been active for the specified
+ *  duration. If the duration has elapsed, it sets the PWM duty cycle to zero
+ *  on both buzzer pins and marks the buzzer as inactive.
+ *  This function is non-blocking and should be called regularly from loop().
+ */
+void buzz_update()
+{
+    if (buzzerActive && (millis() - buzzerStart) >= buzzerDuration)
+    {
+        analogWrite(BUZZER1_PIN, 0);
+        analogWrite(BUZZER2_PIN, 0);
+        buzzerActive = false;
+    }
 }

@@ -5,6 +5,8 @@
 
 #include "config.h"
 
+static bool displayDirty = false;
+
 /**
  * @brief Namespace for color constants used in the display
  * @details
@@ -136,6 +138,29 @@ int CharToIndex(char c) // look up the index from patterns array
 }
 
 /**
+ * @brief Get the current blink state
+ * @return The current blink state (true or false)
+ * @details
+ *  This function toggles the blink state every BLINK_PERIOD milliseconds.
+ *  The blink state is shared by DisplayTime() and DisplayTemperature().
+ *  The function is non-blocking and uses millis() to track elapsed time.
+ */
+bool GetBlinkState()
+{
+    static uint32_t previousMillis = 0;
+    static bool blink = false;
+
+    uint32_t now = millis();
+    if (now - previousMillis >= BLINK_PERIOD)
+    {
+        previousMillis = now;
+        blink = !blink;
+    }
+
+    return blink;
+}
+
+/**
  * @brief Display 4 characters on 4 segments of LED segments
  * @param c0 character to display on first segment
  * @param c1 character to display on second segment
@@ -167,6 +192,7 @@ void Display(char c0, char c1, char c2, char c3, CRGB color0, CRGB color1, CRGB 
         }
         else
         {
+            displayDirty = true;
             prev_chars[i] = chars[i];
             prev_colors[i] = colors[i];
             for (int j = 1; j < NUM_LEDS_PER_SEG; j++)
@@ -201,20 +227,13 @@ void Display(char c0, char c1, char c2, char c3, CRGB color0, CRGB color1, CRGB 
  */
 void DisplayTime(tm &time_struct, CRGB color0, CRGB color1, CRGB color2, CRGB color3, CRGB (&pixels)[NUM_SEGS][NUM_LEDS_PER_SEG])
 {
-    static unsigned long timePast = 0;
-    static bool blink = false;
+    bool blink = GetBlinkState();
 
     uint8_t hour[2], minute[2];
     hour[0] = time_struct.tm_hour / 10;
     hour[1] = time_struct.tm_hour % 10;
     minute[0] = time_struct.tm_min / 10;
     minute[1] = time_struct.tm_min % 10;
-
-    if (millis() - timePast >= 1000)
-    {
-        blink = !blink;
-        timePast = millis();
-    }
 
     Display(hour[0] + '0', hour[1] + '0', minute[0] + '0', blink ? (minute[1] + '0') : ' ', color0, color1, color2, color3, pixels);
 }
@@ -236,12 +255,12 @@ void DisplayTime(tm &time_struct, CRGB color0, CRGB color1, CRGB color2, CRGB co
  */
 void DisplayTemperature(int temp, CRGB color0, CRGB color1, CRGB color2, CRGB color3, CRGB (&pixels)[NUM_SEGS][NUM_LEDS_PER_SEG])
 {
-    static unsigned long timePast = 0;
-    static bool blink = false;
+    bool blink = GetBlinkState();
     bool negative_temp = false;
 
     if (temp > 99 || temp < -99)
     {
+        Display('E', 'R', 'R', '`', color0, color1, color2, color3, pixels);
         return; // Are you okay?
     }
 
@@ -253,12 +272,6 @@ void DisplayTemperature(int temp, CRGB color0, CRGB color1, CRGB color2, CRGB co
 
     int first_digit = temp / 10;
     int second_digit = temp % 10;
-
-    if (millis() - timePast >= 1000)
-    {
-        blink = !blink;
-        timePast = millis();
-    }
 
     if (negative_temp == false)
     {
@@ -283,6 +296,7 @@ void DisplayTemperature(int temp, CRGB color0, CRGB color1, CRGB color2, CRGB co
  */
 void SetFirstPixels(CRGB color0, CRGB color1, CRGB color2, CRGB color3, CRGB (&pixels)[NUM_SEGS][NUM_LEDS_PER_SEG])
 {
+    displayDirty = true;
     pixels[0][0] = color0;
     pixels[1][0] = color1;
     pixels[2][0] = color2;
@@ -292,10 +306,11 @@ void SetFirstPixels(CRGB color0, CRGB color1, CRGB color2, CRGB color3, CRGB (&p
 void UpdateDisplay(uint8_t brightness, CRGB (&pixels)[NUM_SEGS][NUM_LEDS_PER_SEG])
 {
     static uint8_t prev_brightness = 0;
-    if (brightness != prev_brightness)
+    if (brightness != prev_brightness || displayDirty == true)
     {
+        displayDirty = false;
         prev_brightness = brightness;
         FastLED.setBrightness(brightness);
+        FastLED.show();
     }
-    FastLED.show();
 }

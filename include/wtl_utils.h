@@ -17,13 +17,17 @@ GyverDS18Single DS18(DS18_PIN);
  * @brief      Encodes spaces in a given string according to the URL
  *             encoding standard, replacing them with %20.
  * @param str  The string to encode.
- * @return     The encoded string.
- * @warning    This function allocates memory
- *             that must be freed when finished with the string. Failure
- *             to do so will result in a memory leak.
+ * @return     A pointer to the encoded string, or nullptr if allocation fails.
+ * @warning    This function only encodes spaces, not all characters requiring
+ *             URL encoding.
+ *             The returned memory must be freed when finished with the string.
  */
 char *URLencodeSpaces(const char *str)
 {
+    if (str == nullptr)
+    {
+        return nullptr;
+    }
     size_t len = strlen(str);
     size_t spaceCount = 0;
 
@@ -40,7 +44,7 @@ char *URLencodeSpaces(const char *str)
 
     if (!encoded)
     {
-        return NULL;
+        return nullptr;
     }
 
     size_t j = 0;
@@ -67,18 +71,19 @@ char *URLencodeSpaces(const char *str)
  * @param countryCode the country code of the city
  * @param apiKey the API key for OpenWeatherMap
  * @param OutdoorTemp[out] the current outdoor temperature in degrees Celsius, or 99 if there was an error
- * @param SunriseEpoch[out] sunrise time as a Unix epoch timestamp in current timezone, or 0 if there was an error
- * @param SunsetEpoch[out] sunset time as a Unix epoch timestamp in current timezone, or 0 if there was an error
+ * @param SunriseEpoch[out] the sunrise Unix timestamp adjusted by the timezone offset, or 0 if there was an error
+ * @param SunsetEpoch[out] the sunset Unix timestamp adjusted by the timezone offset, or 0 if there was an error
  * @return 0 on success, 1 on error
  * @details
  *  This function sends a GET request to OpenWeatherMap's weather API and
- *  extracts the current temperature, sunrise, and sunset from the JSON
- *  response. If there was an error with the request or if the JSON could
- *  not be parsed, OutdoorTemp is set to 99 and the epochs to 0.
+ *  extracts the current temperature, sunrise, sunset, and timezone offset
+ *  from the JSON response.
+ *  If there was an error with the request or if the JSON could not be parsed,
+ *  OutdoorTemp is set to 99 and the sunrise and sunset values to 0.
  */
 uint8_t FetchOutdoorData(const char *city, const char *countryCode, const char *apiKey, double &OutdoorTemp, uint32_t &SunriseEpoch, uint32_t &SunsetEpoch)
 {
-    if (city == NULL || apiKey == NULL)
+    if (city == nullptr || apiKey == nullptr || countryCode == nullptr)
     {
         OutdoorTemp = 99;
         SunriseEpoch = 0;
@@ -87,7 +92,7 @@ uint8_t FetchOutdoorData(const char *city, const char *countryCode, const char *
     }
 
     char *cityEncoded = URLencodeSpaces(city);
-    if (cityEncoded == NULL)
+    if (cityEncoded == nullptr)
     {
         OutdoorTemp = 99;
         SunriseEpoch = 0;
@@ -141,15 +146,13 @@ uint8_t FetchOutdoorData(const char *city, const char *countryCode, const char *
  * @param cityArrSize size of the city buffer
  * @param countryCode buffer to store the country code
  * @param countryCodeArrSize size of the country code buffer
- * @return the timezone offset in seconds or 0 if there was an error
+ * @return the timezone offset in seconds, or 0 (UTC) if there was an error
  * @details
  *  This function makes a request to ip-api.com to obtain the country code,
  *  city name, and timezone offset of the user based on their IP address.
  *  If the request is successful, the city and country code are copied
  *  into the provided buffers, and the timezone offset is returned.
- *  If there is an error, the function returns 0.
  */
-
 int32_t GetTzOffsetAndCity(char *city, size_t cityArrSize, char *countryCode, size_t countryCodeArrSize)
 {
     HTTPClient http;

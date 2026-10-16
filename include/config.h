@@ -15,8 +15,12 @@
 // const char *NTP_SERVER3 = ""; // Optional
 // const char *OPENWEATHERMAP_API_KEY = "";
 
+#define WIFI_TIMEOUT_MS 20000
+#define WIFI_RETRY_PERIOD_MIN 5
+
 #define NUM_SEGS 4
 #define NUM_LEDS_PER_SEG 23
+#define BLINK_PERIOD 1000
 
 #define SEG0_PIN GPIO_NUM_6
 #define SEG1_PIN GPIO_NUM_7
