@@ -17,73 +17,72 @@ static bool displayDirty = false;
 namespace Colors
 {
     // Message
-    constexpr uint32_t MessageChar0 = CRGB::Fuchsia;
-    constexpr uint32_t MessageChar1 = CRGB::Crimson;
-    constexpr uint32_t MessageChar2 = CRGB::Fuchsia;
-    constexpr uint32_t MessageChar3 = CRGB::Crimson;
+    const uint32_t MessageChar0 = CRGB::Fuchsia;
+    const uint32_t MessageChar1 = CRGB::Crimson;
+    const uint32_t MessageChar2 = CRGB::Fuchsia;
+    const uint32_t MessageChar3 = CRGB::Crimson;
 
     // Time
-    constexpr uint32_t TimeHourTens = CRGB::Red;
-    constexpr uint32_t TimeHourOnes = CRGB::Orange;
-    constexpr uint32_t TimeMinTens = CRGB::Red;
-    constexpr uint32_t TimeMinOnes = CRGB::Orange;
+    const uint32_t TimeHourTens = CRGB::Red;
+    const uint32_t TimeHourOnes = CRGB::Orange;
+    const uint32_t TimeMinTens = CRGB::Red;
+    const uint32_t TimeMinOnes = CRGB::Orange;
 
     // Outdoor Temperature
-    constexpr uint32_t OutdoorTempTens = CRGB::Blue;
-    constexpr uint32_t OutdoorTempOnes = CRGB::Gold;
-    constexpr uint32_t OutdoorTempDeg = CRGB::Blue;
-    constexpr uint32_t OutdoorTempCelsius = CRGB::Gold;
+    const uint32_t OutdoorTempTens = CRGB::Blue;
+    const uint32_t OutdoorTempOnes = CRGB::Gold;
+    const uint32_t OutdoorTempDeg = CRGB::Blue;
+    const uint32_t OutdoorTempCelsius = CRGB::Gold;
 
     // Indoor
-    constexpr uint32_t IndoorTempTens = CRGB::Green;
-    constexpr uint32_t IndoorTempOnes = CRGB::White;
-    constexpr uint32_t IndoorTempDeg = CRGB::Green;
-    constexpr uint32_t IndoorTempCelsius = CRGB::White;
+    const uint32_t IndoorTempTens = CRGB::Green;
+    const uint32_t IndoorTempOnes = CRGB::White;
+    const uint32_t IndoorTempDeg = CRGB::Green;
+    const uint32_t IndoorTempCelsius = CRGB::White;
 }
 
 // Character maps
-static const bool patterns[39][NUM_LEDS_PER_SEG] = {
-    {0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0}, // 0
-    {0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0}, // 1
-    {0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0}, // 2
-    {0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 0, 0, 0, 1, 1, 1, 0, 0}, // 3
-    {0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0}, // 4
-    {0, 1, 1, 1, 1, 0, 0, 0, 1, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 0}, // 5
-    {0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0}, // 6
-    {0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, // 7
-    {0, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 0}, // 8
-    {0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 0, 0, 1, 1, 1, 1, 0, 0}, // 9
-    {0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0}, // A - 10
-    {0, 1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0}, // B - 11
-    {0, 0, 1, 1, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0}, // C - 12
-    {0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0}, // D - 13
-    {0, 1, 1, 1, 1, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0}, // E - 14
-    {0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0}, // F - 15
-    {0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0}, // G - 16
-    {0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0}, // H - 17
-    {0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1}, // I - 18
-    {0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0}, // J - 19
-    {0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1}, // K - 20
-    {0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0}, // L - 21
-    {0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0}, // M - 22
-    {0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0}, // N - 23
-    {0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0}, // O - 24
-    {0, 1, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0}, // P - 25
-    {0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0}, // Q - 26
-    {0, 1, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1}, // R - 27
-    {0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0}, // S - 28
-    {0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1}, // T - 29
-    {0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0}, // U - 30
-    {0, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1}, // V - 31
-    {0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1}, // W - 32
-    {0, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 1, 0, 0}, // X - 33
-    {0, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1}, // Y - 34
-    {0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 0, 0}, // Z - 35
-    {0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0}, // ° - 36
-    {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0}, // - - 37
-    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, // SPACE - 38
+const uint32_t patterns[39] = {
+    0b00001111101101111101100, // 0
+    0b01000000000011111110000, // 1
+    0b00111001101110001101100, // 2
+    0b00111000101101111101100, // 3
+    0b00111110000011111110010, // 4
+    0b00111110011101100011110, // 5
+    0b00111111101101100011100, // 6
+    0b00000000000011111111110, // 7
+    0b00111101101101101101100, // 8
+    0b00111100101101111101100, // 9
+    0b00111111110011111101100, // A - 10
+    0b00111111111101101101110, // B - 11
+    0b00001111101101000101100, // C - 12
+    0b00001111111101111101110, // D - 13
+    0b00111111111110010011110, // E - 14
+    0b00111111110000000011110, // F - 15
+    0b00101111101101110011100, // G - 16
+    0b00111111110011111110010, // H - 17
+    0b11110000011110000011110, // I - 18
+    0b00000001101101111111110, // J - 19
+    0b11011111110110000011010, // K - 20
+    0b00001111111110000000010, // L - 21
+    0b01001111110011111110010, // M - 22
+    0b01101111110011111110010, // N - 23
+    0b00001111101101111101100, // O - 24
+    0b00111111110000001101110, // P - 25
+    0b00111100000011111111100, // Q - 26
+    0b10111111110110001101110, // R - 27
+    0b00111100011101100011100, // S - 28
+    0b11110000000000000011110, // T - 29
+    0b00001111101101111110010, // U - 30
+    0b10001110000000011110010, // V - 31
+    0b11111111101101111110010, // W - 32
+    0b00111101110011101110010, // X - 33
+    0b10111100001100001110010, // Y - 34
+    0b00110001111110001111110, // Z - 35
+    0b00111100000000001101100, // ° - 36
+    0b00110010000000010000000, // - - 37
+    0b00000000000000000000000, // SPACE - 38
 };
-//    {0, 1, 0, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1}, // K - 20 (Alternative pattern for K)
 
 /**
  * @brief Initialize the LED segments for display
@@ -195,15 +194,16 @@ void Display(char c0, char c1, char c2, char c3, CRGB color0, CRGB color1, CRGB 
             displayDirty = true;
             prev_chars[i] = chars[i];
             prev_colors[i] = colors[i];
-            for (int j = 1; j < NUM_LEDS_PER_SEG; j++)
+            for (int j = 1; j < NUM_LEDS_PER_SEG; j++) // Start at 1 to skip the first LED
             {
-                if (patterns[CharToIndex(chars[i])][j])
+                uint32_t bit_select = 1UL << j;
+                if (patterns[CharToIndex(chars[i])] & bit_select != 0)
                 {
                     pixels[i][j] = colors[i];
                 }
                 else
                 {
-                    pixels[i][j] = CRGB::Black;
+                    pixels[i][j] = CRGB::Black; // Set the LED to black
                 }
             }
         }
