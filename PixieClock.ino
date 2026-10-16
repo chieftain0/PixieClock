@@ -73,7 +73,7 @@ void setup()
     SetFirstPixels(CRGB::Blue, CRGB::Blue, CRGB::Blue, CRGB::Blue, PIXELS);
     Display('W', 'I', 'F', 'I', Colors::MessageChar0, Colors::MessageChar1, Colors::MessageChar2, Colors::MessageChar3, PIXELS);
     UpdateDisplay(brightness, PIXELS);
-    Serial.print("Connecting to WiFi: ");
+    Serial.print("Connecting to WiFi: \n");
     Serial.println(SSID);
     if (isEAP)
     {
@@ -90,6 +90,7 @@ void setup()
     }
     if (WiFi.status() != WL_CONNECTED)
     {
+        Serial.println("Failed to connect to WiFi. Will wait and reboot...\n");
         Display('E', 'R', 'R', 'W', Colors::MessageChar0, Colors::MessageChar1, Colors::MessageChar2, Colors::MessageChar3, PIXELS);
         UpdateDisplay(brightness, PIXELS);
         SafeDelay(WIFI_RETRY_PERIOD_MIN * 60 * 1000);
@@ -97,7 +98,7 @@ void setup()
     }
 
     // Get Geolocation
-    Serial.print("Getting Geolocation: ");
+    Serial.print("Getting Geolocation: \n");
     Display('C', 'I', 'T', 'Y', Colors::MessageChar0, Colors::MessageChar1, Colors::MessageChar2, Colors::MessageChar3, PIXELS);
     UpdateDisplay(brightness, PIXELS);
     timezoneOffset = GetTzOffsetAndCity(city, sizeof(city), countryCode, sizeof(countryCode));
@@ -108,13 +109,13 @@ void setup()
     Serial.println(timezoneOffset);
 
     // Sync time for the first time
-    Serial.print("Syncing time: ");
+    Serial.print("Syncing time: \n");
     Display('T', 'I', 'M', 'E', Colors::MessageChar0, Colors::MessageChar1, Colors::MessageChar2, Colors::MessageChar3, PIXELS);
     UpdateDisplay(brightness, PIXELS);
     configTime(timezoneOffset, 0, NTP_SERVER1, NTP_SERVER2, NTP_SERVER3);
     if (!GetTimeFromRTC(&timeinfo, 10))
     {
-        Serial.println("\nFailed to sync time. Rebooting...");
+        Serial.println("Failed to sync time. Rebooting...\n");
         ESP.restart();
     }
     lastSyncHour = timeinfo.tm_hour;
@@ -149,20 +150,20 @@ void loop()
         // Get time for this loop
         if (!GetTimeFromRTC(&timeinfo, 10))
         {
-            Serial.println("Failed to sync time. Rebooting...");
+            Serial.println("Failed to sync time. Rebooting...\n");
             ESP.restart();
         }
 
         // Check if time needs to be synced
         if (lastSyncHour != timeinfo.tm_hour || timeinfo.tm_year < 125) // 125 is 2025
         {
-            Serial.print("Syncing time: ");
+            Serial.print("Syncing time: \n");
             Display('T', 'I', 'M', 'E', Colors::MessageChar0, Colors::MessageChar1, Colors::MessageChar2, Colors::MessageChar3, PIXELS);
             UpdateDisplay(brightness, PIXELS);
             configTime(timezoneOffset, 0, NTP_SERVER1, NTP_SERVER2, NTP_SERVER3);
             if (!GetTimeFromRTC(&timeinfo, 10))
             {
-                Serial.println("\nFailed to sync time. Rebooting...");
+                Serial.println("\nFailed to sync time. Rebooting...\n");
                 ESP.restart();
             }
             lastSyncHour = timeinfo.tm_hour;
